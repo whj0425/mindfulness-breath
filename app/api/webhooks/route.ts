@@ -38,11 +38,16 @@ export async function POST(request: NextRequest): Promise<Response> {
 }
 
 async function potentiallyLongRunningHandler(
-	_user_id: string | null | undefined,
-	_amount: number,
-	_currency: string,
-	_amount_after_fees: number | null | undefined,
+	userId: string | null | undefined,
+	amount: number,
+	currency: string,
+	amountAfterFees: number | null | undefined,
 ) {
+	void userId;
+	void amount;
+	void currency;
+	void amountAfterFees;
+
 	// This is a placeholder for a potentially long running operation
 	// In a real scenario, you might need to fetch user data, update a database, etc.
 }

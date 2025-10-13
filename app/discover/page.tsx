@@ -9,7 +9,7 @@ export default function DiscoverPage() {
 				{/* Main Description Card */}
 				<div className="bg-white rounded-xl p-8 shadow-md text-center mb-16">
 					<p className="text-xl text-gray-600 max-w-2xl mx-auto mb-4">
-						This is your app's discover page—showcase what your app does and how
+						This is your app&rsquo;s discover page—showcase what your app does and how
 						it helps creators.
 					</p>
 					<p className="text-base text-gray-500 max-w-2xl mx-auto mb-2">
@@ -18,7 +18,7 @@ export default function DiscoverPage() {
 						install your app.
 					</p>
 					<p className="text-sm text-gray-400 max-w-2xl mx-auto">
-						💡 <strong>Tip:</strong> Clearly explain your app's value
+						💡 <strong>Tip:</strong> Clearly explain your app&rsquo;s value
 						proposition and how it helps creators make money or grow their
 						communities.
 					</p>
@@ -60,10 +60,10 @@ export default function DiscoverPage() {
 							</h3>
 							<p className="text-xs text-gray-500 mb-2">Trading Community</p>
 							<p className="text-gray-700 mb-4 text-sm">
-								"Grew to{" "}
+								&ldquo;Grew to{" "}
 								<span className="font-bold text-blue-600">2,500+ members</span>{" "}
 								and <span className="font-bold text-blue-600">$18,000+/mo</span>{" "}
-								with automated signals. Members love the real-time alerts!"
+								with automated signals. Members love the real-time alerts!&rdquo;
 							</p>
 						</div>
 						<a
@@ -82,11 +82,11 @@ export default function DiscoverPage() {
 							</h3>
 							<p className="text-xs text-gray-500 mb-2">Premium Signals</p>
 							<p className="text-gray-700 mb-4 text-sm">
-								"Retention jumped to{" "}
+								&ldquo;Retention jumped to{" "}
 								<span className="font-bold text-blue-600">92%</span>. Affiliate
 								program brought in{" "}
 								<span className="font-bold text-blue-600">$4,000+</span> last
-								quarter."
+								quarter.&rdquo;
 							</p>
 						</div>
 						<a

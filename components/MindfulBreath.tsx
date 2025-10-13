@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type SVGProps } from "react";
+import { prepareLoopBuffer } from "@/lib/audio-loop";
+import { useCallback, useEffect, useMemo, useRef, useState, type SVGProps } from "react";
 
 const MODES = [
 	{
@@ -33,20 +34,97 @@ const MODES = [
 	},
 ] as const;
 
-const AMBIENT_TRACKS = [
-	{ key: "oceanWaves", label: "Ocean Waves", file: "/audio/ocean-waves.mp3", gain: 1 },
-	{ key: "rainCarRoof", label: "Rain on Car Roof", file: "/audio/rain-car-roof.mp3", gain: 1 },
-	{ key: "lightRain", label: "Light Rain", file: "/audio/light-rain.mp3", gain: 1 },
-	{ key: "calmRiver", label: "Calm River", file: "/audio/calm-river.mp3", gain: 1 },
-	{ key: "campfire", label: "Campfire", file: "/audio/campfire.mp3", gain: 0.9 },
-	{ key: "countryside", label: "Countryside", file: "/audio/countryside.mp3", gain: 1 },
+type LoopPlaybackConfig = { type: "loop" };
+type RandomSlicePlaybackConfig = {
+	type: "randomSlice";
+	minRatio: number;
+	maxRatio?: number;
+	fadeDuration: number;
+	scheduleAhead?: number;
+};
+type PlaybackConfig = LoopPlaybackConfig | RandomSlicePlaybackConfig;
+
+type AmbientTrack = {
+	key: string;
+	label: string;
+	file: string;
+	gain: number;
+	playback?: PlaybackConfig;
+};
+
+const AMBIENT_TRACKS: readonly AmbientTrack[] = [
+	{
+		key: "oceanWaves",
+		label: "Ocean Waves",
+		file: "/audio/ocean-waves.mp3",
+		gain: 1,
+	playback: {
+		type: "randomSlice",
+		minRatio: 0.5,
+		maxRatio: 0.75,
+		fadeDuration: 0.08,
+		scheduleAhead: 4,
+	},
+},
+	{
+		key: "rainCarRoof",
+		label: "Rain on Car Roof",
+		file: "/audio/rain-car-roof.mp3",
+		gain: 1,
+	playback: {
+		type: "randomSlice",
+		minRatio: 0.5,
+		maxRatio: 0.8,
+		fadeDuration: 0.08,
+		scheduleAhead: 4,
+	},
+},
+	{
+		key: "lightRain",
+		label: "Light Rain",
+		file: "/audio/light-rain.mp3",
+		gain: 1,
+	playback: {
+		type: "randomSlice",
+		minRatio: 0.5,
+		maxRatio: 0.8,
+		fadeDuration: 0.08,
+		scheduleAhead: 3,
+	},
+},
+	{
+		key: "calmRiver",
+		label: "Calm River",
+		file: "/audio/calm-river.mp3",
+		gain: 1,
+	playback: {
+		type: "randomSlice",
+		minRatio: 0.5,
+		maxRatio: 0.75,
+		fadeDuration: 0.08,
+		scheduleAhead: 4,
+	},
+},
+	{
+		key: "countryside",
+		label: "Countryside",
+		file: "/audio/countryside.mp3",
+		gain: 1,
+	playback: {
+		type: "randomSlice",
+		minRatio: 0.5,
+		maxRatio: 0.78,
+		fadeDuration: 0.08,
+		scheduleAhead: 4,
+	},
+},
 ] as const;
 
 const SOUNDS = [{ key: "off", label: "Mute" }, ...AMBIENT_TRACKS] as const;
 
 type Mode = (typeof MODES)[number];
 type PhaseKey = keyof Mode["phases"];
-type AmbientTrack = (typeof AMBIENT_TRACKS)[number];
+type ActiveGrain = { source: AudioBufferSourceNode; gain: GainNode };
 type ActiveSoundKey = AmbientTrack["key"];
 type SoundKey = "off" | ActiveSoundKey;
 
@@ -64,7 +142,13 @@ const STOP_DELAY = 0.12;
 type TrackBag = {
 	gain: GainNode;
 	buffer?: AudioBuffer;
+	loopStart?: number;
+	loopEnd?: number;
 	source?: AudioBufferSourceNode;
+	grains?: Set<ActiveGrain>;
+	nextGrainTime?: number;
+	scheduleHandle?: number;
+	playbackType?: PlaybackConfig["type"];
 	loading?: Promise<AudioBuffer | null>;
 };
 
@@ -81,6 +165,8 @@ export default function MindfulBreath() {
 	const [soundKey, setSoundKey] = useState<SoundKey>((AMBIENT_TRACKS[0]?.key ?? "off") as SoundKey);
 	const [volume, setVolume] = useState(0.25);
 	const [btnPop, setBtnPop] = useState(false);
+	const soundButtonRef = useRef<HTMLButtonElement | null>(null);
+	const soundPopoverRef = useRef<HTMLDivElement | null>(null);
 
 	const [isRunning, setIsRunning] = useState(false);
 	const [phaseIdx, setPhaseIdx] = useState(0);
@@ -119,7 +205,7 @@ export default function MindfulBreath() {
 		phaseElapsedRef.current = phaseElapsed;
 	}, [phaseElapsed]);
 
-	const tick = (ts: number) => {
+	const tick = useCallback((ts: number) => {
 		if (!runningRef.current) return;
 		if (lastTsRef.current == null) lastTsRef.current = ts;
 		const dt = (ts - lastTsRef.current) / 1000;
@@ -157,7 +243,7 @@ export default function MindfulBreath() {
 		setPhaseElapsed(nextElapsed);
 
 		rafRef.current = window.requestAnimationFrame(tick);
-	};
+	}, []);
 
 	const progress = useMemo(() => {
 		const p = phaseDur > 0 ? phaseElapsed / phaseDur : 1;
@@ -175,7 +261,7 @@ export default function MindfulBreath() {
 		}
 	}, [phaseDur, phaseElapsed, phaseKey]);
 
-	async function ensureAudio() {
+	const ensureAudio = useCallback(async (): Promise<AudioBag | null> => {
 		try {
 			if (audioRef.current) {
 				try {
@@ -218,9 +304,9 @@ export default function MindfulBreath() {
 		} catch {
 			return null;
 		}
-	}
+	}, []);
 
-	async function loadTrackBuffer(a: AudioBag, key: ActiveSoundKey) {
+	const loadTrackBuffer = useCallback(async (a: AudioBag, key: ActiveSoundKey) => {
 		const track = a.tracks[key];
 		if (!track) return null;
 		if (track.buffer) return track.buffer;
@@ -231,8 +317,11 @@ export default function MindfulBreath() {
 				try {
 					const res = await fetch(config.file);
 					const arrayBuffer = await res.arrayBuffer();
-					const buffer = await a.ctx.decodeAudioData(arrayBuffer);
+					const rawBuffer = await a.ctx.decodeAudioData(arrayBuffer);
+					const { buffer, loopStart, loopEnd } = prepareLoopBuffer(a.ctx, rawBuffer);
 					track.buffer = buffer;
+					track.loopStart = loopStart;
+					track.loopEnd = loopEnd;
 					return buffer;
 				} catch {
 					return null;
@@ -246,72 +335,212 @@ export default function MindfulBreath() {
 		} finally {
 			track.loading = undefined;
 		}
-	}
+	}, []);
 
-		function fadeOutAll(a: AudioBag) {
+	const stopDynamicPlayback = useCallback((bag: TrackBag, now: number) => {
+		if (bag.scheduleHandle != null) {
+			window.clearTimeout(bag.scheduleHandle);
+			bag.scheduleHandle = undefined;
+		}
+		if (bag.grains) {
+			bag.grains.forEach(({ source, gain }) => {
+				try {
+					gain.gain.cancelScheduledValues(now);
+					gain.gain.setTargetAtTime(0, now, FADE_TAU);
+					source.stop(now + STOP_DELAY);
+				} catch {
+					// ignored
+				}
+				try {
+					gain.disconnect();
+				} catch {
+					// ignored
+				}
+			});
+			bag.grains.clear();
+			bag.grains = undefined;
+		}
+		bag.nextGrainTime = undefined;
+		bag.playbackType = undefined;
+	}, []);
+
+	const ensureRandomSlicePlayback = useCallback(
+		(a: AudioBag, bag: TrackBag, buffer: AudioBuffer, config: RandomSlicePlaybackConfig) => {
+			const scheduleAhead = config.scheduleAhead ?? 5;
+			const minRatio = Math.min(Math.max(config.minRatio, 0.05), 1);
+			const maxRatio = config.maxRatio ? Math.max(minRatio, Math.min(config.maxRatio, 1)) : minRatio;
+			const baseFade = Math.max(0, Math.min(config.fadeDuration, buffer.duration / 3));
+
+			const schedule = () => {
+				bag.scheduleHandle = undefined;
+				const now = a.ctx.currentTime;
+				let nextTime = bag.nextGrainTime ?? now;
+				if (!bag.grains) {
+					bag.grains = new Set();
+				}
+
+				while (nextTime < now + scheduleAhead) {
+					const ratio = minRatio + Math.random() * (maxRatio - minRatio);
+					const sliceDuration = Math.min(buffer.duration, buffer.duration * ratio);
+					if (sliceDuration <= 0) break;
+					const fade = Math.min(baseFade, sliceDuration / 3);
+					const playable = Math.max(0, buffer.duration - sliceDuration);
+					const offset = playable > 0 ? Math.random() * playable : 0;
+
+					const source = a.ctx.createBufferSource();
+					source.buffer = buffer;
+
+					const sliceGain = a.ctx.createGain();
+					if (fade > 0) {
+						sliceGain.gain.setValueAtTime(0, nextTime);
+						sliceGain.gain.linearRampToValueAtTime(1, nextTime + fade);
+						const sustainEnd = nextTime + sliceDuration - fade;
+						if (sustainEnd > nextTime + fade) {
+							sliceGain.gain.setValueAtTime(1, sustainEnd);
+						}
+						sliceGain.gain.linearRampToValueAtTime(0, nextTime + sliceDuration);
+					} else {
+						sliceGain.gain.setValueAtTime(1, nextTime);
+						sliceGain.gain.setValueAtTime(1, nextTime + sliceDuration);
+					}
+
+					source.connect(sliceGain);
+					sliceGain.connect(bag.gain);
+					source.start(nextTime, offset, sliceDuration);
+					source.stop(nextTime + sliceDuration);
+
+					const grain: ActiveGrain = { source, gain: sliceGain };
+					bag.grains?.add(grain);
+
+					source.onended = () => {
+						try {
+							sliceGain.disconnect();
+						} catch {
+							// ignored
+						}
+						bag.grains?.delete(grain);
+						if (!bag.grains?.size) {
+							bag.grains = undefined;
+						}
+					};
+
+					const spacing = fade > 0 ? Math.max(sliceDuration - fade, sliceDuration * 0.6) : sliceDuration;
+					nextTime += spacing;
+				}
+
+				bag.nextGrainTime = nextTime;
+				bag.scheduleHandle = window.setTimeout(schedule, 300);
+			};
+
+			if (bag.scheduleHandle != null) {
+				return;
+			}
+
+			bag.grains = bag.grains ?? new Set();
+			bag.nextGrainTime = bag.nextGrainTime ?? a.ctx.currentTime;
+			schedule();
+		},
+		[],
+	);
+
+	const fadeOutAll = useCallback(
+		(a: AudioBag) => {
 			const now = a.ctx.currentTime;
 			Object.values(a.tracks).forEach((track) => {
 				track.gain.gain.cancelScheduledValues(now);
 				track.gain.gain.setTargetAtTime(0, now, FADE_TAU);
-				const source = track.source;
-			if (source) {
-				try {
-					source.stop(now + STOP_DELAY);
-				} catch {
-					// ignored
+				if (track.playbackType && track.playbackType !== "loop") {
+					stopDynamicPlayback(track, now);
+				} else {
+					const source = track.source;
+					if (source) {
+						try {
+							source.stop(now + STOP_DELAY);
+						} catch {
+							// ignored
+						}
+						track.source = undefined;
 					}
-					track.source = undefined;
 				}
 			});
-		}
+		},
+		[stopDynamicPlayback],
+	);
 
-	async function playAmbient(a: AudioBag, key: ActiveSoundKey) {
-		const trackConfig = AMBIENT_TRACKS.find((t) => t.key === key);
-		if (!trackConfig) return;
+	const playAmbient = useCallback(
+		async (a: AudioBag, key: ActiveSoundKey) => {
+			const trackConfig = AMBIENT_TRACKS.find((t) => t.key === key);
+			if (!trackConfig) return;
 
-		const now = a.ctx.currentTime;
+			const now = a.ctx.currentTime;
 
-		Object.entries(a.tracks).forEach(([trackKey, track]) => {
-			if (trackKey === key) return;
-			track.gain.gain.cancelScheduledValues(now);
-			track.gain.gain.setTargetAtTime(0, now, FADE_TAU);
-			const source = track.source;
-			if (source) {
-				try {
-					source.stop(now + STOP_DELAY);
-				} catch {
-					// ignored
+			Object.entries(a.tracks).forEach(([trackKey, track]) => {
+				if (trackKey === key) return;
+				track.gain.gain.cancelScheduledValues(now);
+				track.gain.gain.setTargetAtTime(0, now, FADE_TAU);
+				if (track.playbackType && track.playbackType !== "loop") {
+					stopDynamicPlayback(track, now);
+				} else {
+					const source = track.source;
+					if (source) {
+						try {
+							source.stop(now + STOP_DELAY);
+						} catch {
+							// ignored
+						}
+						track.source = undefined;
+					}
 				}
-				track.source = undefined;
-			}
-		});
+			});
 
-		const bag = a.tracks[key];
-		if (!bag) return;
+			const bag = a.tracks[key];
+			if (!bag) return;
 
-		const buffer = await loadTrackBuffer(a, key);
-		if (!buffer) return;
+			const buffer = await loadTrackBuffer(a, key);
+			if (!buffer) return;
 
-		if (!bag.source) {
-			const source = a.ctx.createBufferSource();
-			source.buffer = buffer;
-			source.loop = true;
-			source.connect(bag.gain);
-			source.start();
-			source.onended = () => {
-				if (bag.source === source) {
+			const playback: PlaybackConfig = trackConfig.playback ?? { type: "loop" };
+			bag.playbackType = playback.type;
+
+			if (playback.type === "randomSlice") {
+				if (bag.source) {
+					try {
+						bag.source.stop(now + STOP_DELAY);
+					} catch {
+						// ignored
+					}
 					bag.source = undefined;
 				}
-			};
-			bag.source = source;
-		}
+				ensureRandomSlicePlayback(a, bag, buffer, playback);
+			} else {
+				stopDynamicPlayback(bag, now);
+				if (!bag.source) {
+					const source = a.ctx.createBufferSource();
+					source.buffer = buffer;
+					source.loop = true;
+					if (bag.loopStart != null && bag.loopEnd != null && bag.loopEnd > bag.loopStart) {
+						source.loopStart = bag.loopStart;
+						source.loopEnd = bag.loopEnd;
+					}
+					source.connect(bag.gain);
+					source.start();
+					source.onended = () => {
+						if (bag.source === source) {
+							bag.source = undefined;
+						}
+					};
+					bag.source = source;
+				}
+			}
 
-		bag.gain.gain.cancelScheduledValues(now);
-		bag.gain.gain.setTargetAtTime(trackConfig.gain ?? 1, now, FADE_TAU);
-		a.currentKey = key;
-	}
+			bag.gain.gain.cancelScheduledValues(now);
+			bag.gain.gain.setTargetAtTime(trackConfig.gain ?? 1, now, FADE_TAU);
+			a.currentKey = key;
+		},
+		[ensureRandomSlicePlayback, loadTrackBuffer, stopDynamicPlayback],
+	);
 
-	async function pauseAudio() {
+	const pauseAudio = useCallback(() => {
 		const a = audioRef.current;
 		if (!a) return;
 		fadeOutAll(a);
@@ -326,7 +555,7 @@ export default function MindfulBreath() {
 		} catch {
 			// ignored
 		}
-	}
+	}, [fadeOutAll]);
 
 	useEffect(() => {
 		(async () => {
@@ -345,15 +574,33 @@ export default function MindfulBreath() {
 				await playAmbient(a, activeKey);
 			}
 		})();
-	}, [isRunning, soundKey]);
+	}, [ensureAudio, fadeOutAll, isRunning, loadTrackBuffer, playAmbient, soundKey]);
 
 	useEffect(() => {
 		const a = audioRef.current;
 		if (!a) return;
 		const now = a.ctx.currentTime;
-			a.master.gain.cancelScheduledValues(now);
-			a.master.gain.setTargetAtTime(volumeRef.current, now, 0.2);
-		}, [volume]);
+		a.master.gain.cancelScheduledValues(now);
+		a.master.gain.setTargetAtTime(volumeRef.current, now, 0.2);
+	}, [volume]);
+
+	useEffect(() => {
+		if (!soundOpen) return;
+		const handlePointerDown = (event: PointerEvent) => {
+			const target = event.target as Node | null;
+			const buttonEl = soundButtonRef.current;
+			const popoverEl = soundPopoverRef.current;
+			if (!target) return;
+			if ((buttonEl && buttonEl.contains(target)) || (popoverEl && popoverEl.contains(target))) {
+				return;
+			}
+			setSoundOpen(false);
+		};
+		window.addEventListener("pointerdown", handlePointerDown, true);
+		return () => {
+			window.removeEventListener("pointerdown", handlePointerDown, true);
+		};
+	}, [soundOpen]);
 
 	useEffect(() => {
 		(async () => {
@@ -375,7 +622,7 @@ export default function MindfulBreath() {
 		[],
 	);
 
-	const start = async () => {
+	const start = useCallback(async () => {
 		setBtnPop(true);
 		window.setTimeout(() => setBtnPop(false), 300);
 		if (runningRef.current) return;
@@ -386,39 +633,39 @@ export default function MindfulBreath() {
 		setIsRunning(true);
 		lastTsRef.current = null;
 		rafRef.current = window.requestAnimationFrame(tick);
-	};
+	}, [ensureAudio, loadTrackBuffer, soundKey, tick]);
 
-	const pause = () => {
+	const pause = useCallback(() => {
 		setIsRunning(false);
 		if (rafRef.current) cancelAnimationFrame(rafRef.current);
 		rafRef.current = null;
 		lastTsRef.current = null;
 		void pauseAudio();
-	};
+	}, [pauseAudio]);
 
-	const reset = () => {
+	const reset = useCallback(() => {
 		pause();
 		setPhaseIdx(0);
 		setPhaseElapsed(0);
 		phaseIdxRef.current = 0;
 		phaseElapsedRef.current = 0;
-	};
+	}, [pause]);
 
-	const onStartPause = () => (runningRef.current ? pause() : start());
+	const onStartPause = useCallback(() => (runningRef.current ? pause() : start()), [pause, start]);
 
-	const onPrev = () => {
+	const onPrev = useCallback(() => {
 		if (!isRunning) {
 			setModeIndex((i) => (i - 1 + MODES.length) % MODES.length);
 			reset();
 		}
-	};
+	}, [isRunning, reset]);
 
-	const onNext = () => {
+	const onNext = useCallback(() => {
 		if (!isRunning) {
 			setModeIndex((i) => (i + 1) % MODES.length);
 			reset();
 		}
-	};
+	}, [isRunning, reset]);
 
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
@@ -428,12 +675,16 @@ export default function MindfulBreath() {
 			}
 			if (!isRunning && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
 				e.preventDefault();
-				e.key === "ArrowLeft" ? onPrev() : onNext();
+				if (e.key === "ArrowLeft") {
+					onPrev();
+				} else {
+					onNext();
+				}
 			}
 		};
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
-	}, [isRunning]);
+	}, [isRunning, onNext, onPrev, onStartPause]);
 
 	const lockMode = isRunning;
 
@@ -448,6 +699,7 @@ export default function MindfulBreath() {
 				</div>
 				<div className="relative">
 					<button
+						ref={soundButtonRef}
 						onClick={() => setSoundOpen((v) => !v)}
 						className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
 						aria-expanded={soundOpen}
@@ -456,11 +708,12 @@ export default function MindfulBreath() {
 						<IconMusic className="h-4 w-4 text-white/70" />
 						Sound
 					</button>
-					{soundOpen && (
-						<div
-							role="dialog"
-							aria-label="Ambient sound settings"
-							className="absolute right-0 mt-2 w-64 rounded-2xl bg-slate-900/95 p-4 shadow-2xl ring-1 ring-white/10 backdrop-blur-xl"
+						{soundOpen && (
+							<div
+								ref={soundPopoverRef}
+								role="dialog"
+								aria-label="Ambient sound settings"
+								className="absolute right-0 mt-2 w-64 rounded-2xl bg-slate-900/95 p-4 shadow-2xl ring-1 ring-white/10 backdrop-blur-xl"
 						>
 							<div className="grid grid-cols-2 gap-2">
 								{SOUNDS.map((s) => (
