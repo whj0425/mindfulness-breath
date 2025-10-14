@@ -12,6 +12,11 @@ export const MODES: readonly Mode[] = [
 		note: "Cultivate a gentle balance",
 		gradient: "from-cyan-400 to-emerald-500",
 		phases: { inhale: 5, hold1: 0, exhale: 5, hold2: 0 },
+		prompts: {
+			inhale: "Lengthen through the crown of your head as the breath rises.",
+			exhale: "Let your shoulders melt away from your ears.",
+			hold2: "Notice the quiet space before the next inhale.",
+		},
 	},
 	{
 		key: "box",
@@ -19,6 +24,12 @@ export const MODES: readonly Mode[] = [
 		note: "Settle into steady focus",
 		gradient: "from-violet-400 to-fuchsia-500",
 		phases: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 },
+		prompts: {
+			inhale: "Trace the first side of your box from belly to collarbones.",
+			hold1: "Hover in the pause and rest awareness behind your heart.",
+			exhale: "Release down the next side, softening the muscles around your eyes.",
+			hold2: "Feel both feet grounded as you complete the square.",
+		},
 	},
 	{
 		key: "478",
@@ -26,6 +37,11 @@ export const MODES: readonly Mode[] = [
 		note: "Invite deep rest",
 		gradient: "from-sky-400 to-indigo-500",
 		phases: { inhale: 4, hold1: 7, exhale: 8, hold2: 0 },
+		prompts: {
+			inhale: "Draw breath low and wide into the belly.",
+			hold1: "Unclench your jaw and rest the tongue behind your teeth.",
+			exhale: "Let the out-breath spill out like a long whisper.",
+		},
 	},
 	{
 		key: "resonance",
@@ -33,6 +49,11 @@ export const MODES: readonly Mode[] = [
 		note: "Sync with heart coherence",
 		gradient: "from-rose-400 to-orange-500",
 		phases: { inhale: 5, hold1: 0, exhale: 5, hold2: 0 },
+		prompts: {
+			inhale: "Imagine a gentle wave lifting through your ribs.",
+			exhale: "Ride the wave back down, softening the chest.",
+			hold2: "Sense your heartbeat settling into the rhythm.",
+		},
 	},
 ] as const;
 
@@ -124,3 +145,14 @@ export const AUDIO_CONTEXT_CLOSE_DELAY = 0.35;
 export const FADE_TAU = 0.05;
 export const STOP_DELAY = 0.12;
 export const MASTER_FADE_TAU = 0.2;
+
+export const SESSION_PRESETS = [
+	{ key: "2m", label: "2 min", duration: 120 },
+	{ key: "3m", label: "3 min", duration: 180 },
+	{ key: "4m", label: "4 min", duration: 240 },
+	{ key: "5m", label: "5 min", duration: 300 },
+] as const;
+
+export const DEFAULT_SESSION_PRESET = SESSION_PRESETS[1] ?? SESSION_PRESETS[0];
+export const DEFAULT_SESSION_DURATION =
+	DEFAULT_SESSION_PRESET?.duration ?? 180;

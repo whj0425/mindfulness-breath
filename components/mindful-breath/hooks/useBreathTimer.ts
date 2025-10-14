@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
 	DEFAULT_MODE_INDEX,
+	DEFAULT_SESSION_DURATION,
 	LABEL,
 	MODES,
 	ORDER,
@@ -10,6 +11,8 @@ import type { Mode, PhaseKey } from "../types";
 
 type UseBreathTimerOptions = {
 	initialModeIndex?: number;
+	initialSessionDurationSec?: number;
+	onComplete?: () => void;
 };
 
 export type BreathTimerState = {
@@ -20,6 +23,11 @@ export type BreathTimerState = {
 	phaseDuration: number;
 	progress: number;
 	isRunning: boolean;
+	sessionDuration: number;
+	sessionElapsed: number;
+	sessionRemaining: number;
+	sessionProgress: number;
+	isComplete: boolean;
 };
 
 export type BreathTimerControls = {
@@ -29,16 +37,36 @@ export type BreathTimerControls = {
 	nextMode: () => void;
 	prevMode: () => void;
 	setModeIndex: (updater: (current: number) => number) => void;
+	setSessionDuration: (durationSec: number) => void;
 };
 
 export function useBreathTimer(
 	options: UseBreathTimerOptions = {},
 ): [BreathTimerState, BreathTimerControls] {
+	const sanitizeDuration = useCallback(
+		(value: number | undefined) => {
+			if (typeof value !== "number" || Number.isNaN(value)) {
+				return DEFAULT_SESSION_DURATION;
+			}
+			return Math.max(30, Math.round(value));
+		},
+		[],
+	);
+
 	const initialModeIndex = options.initialModeIndex ?? DEFAULT_MODE_INDEX;
+	const initialSessionDuration = sanitizeDuration(
+		options.initialSessionDurationSec,
+	);
+
 	const [modeIndex, setModeIndexState] = useState(initialModeIndex);
 	const [isRunning, setIsRunning] = useState(false);
 	const [phaseIdx, setPhaseIdx] = useState(0);
 	const [phaseElapsed, setPhaseElapsed] = useState(0);
+	const [sessionDuration, setSessionDurationState] = useState(
+		initialSessionDuration,
+	);
+	const [sessionElapsed, setSessionElapsed] = useState(0);
+	const [completed, setCompleted] = useState(false);
 
 	const rafRef = useRef<number | null>(null);
 	const lastTsRef = useRef<number | null>(null);
@@ -46,6 +74,16 @@ export function useBreathTimer(
 	const modeRef = useRef(MODES[initialModeIndex]);
 	const phaseIdxRef = useRef(phaseIdx);
 	const phaseElapsedRef = useRef(phaseElapsed);
+	const sessionDurationRef = useRef(sessionDuration);
+	const sessionElapsedRef = useRef(sessionElapsed);
+	const completionRef = useRef(completed);
+	const onCompleteRef = useRef<UseBreathTimerOptions["onComplete"]>(
+		options.onComplete,
+	);
+
+	useEffect(() => {
+		onCompleteRef.current = options.onComplete;
+	}, [options.onComplete]);
 
 	useEffect(() => {
 		modeRef.current = MODES[modeIndex];
@@ -62,6 +100,18 @@ export function useBreathTimer(
 	useEffect(() => {
 		phaseElapsedRef.current = phaseElapsed;
 	}, [phaseElapsed]);
+
+	useEffect(() => {
+		sessionDurationRef.current = sessionDuration;
+	}, [sessionDuration]);
+
+	useEffect(() => {
+		sessionElapsedRef.current = sessionElapsed;
+	}, [sessionElapsed]);
+
+	useEffect(() => {
+		completionRef.current = completed;
+	}, [completed]);
 
 	const stopRaf = useCallback(() => {
 		if (rafRef.current != null) {
@@ -110,11 +160,44 @@ export function useBreathTimer(
 		phaseElapsedRef.current = nextElapsed;
 		setPhaseElapsed(nextElapsed);
 
+		const nextSessionElapsed = sessionElapsedRef.current + dt;
+		const duration = sessionDurationRef.current;
+		if (duration > 0 && nextSessionElapsed >= duration) {
+			const clampedElapsed = Math.min(nextSessionElapsed, duration);
+			sessionElapsedRef.current = clampedElapsed;
+			setSessionElapsed(clampedElapsed);
+			runningRef.current = false;
+			setIsRunning(false);
+			rafRef.current = null;
+			lastTsRef.current = null;
+			completionRef.current = true;
+			setCompleted(true);
+			window.setTimeout(() => {
+				if (onCompleteRef.current) {
+					onCompleteRef.current();
+				}
+			}, 0);
+			return;
+		}
+
+		sessionElapsedRef.current = nextSessionElapsed;
+		setSessionElapsed(nextSessionElapsed);
+
 		rafRef.current = window.requestAnimationFrame(tick);
 	}, []);
 
 	const start = useCallback(() => {
 		if (runningRef.current) return;
+		if (completionRef.current) {
+			completionRef.current = false;
+			setCompleted(false);
+			setPhaseIdx(0);
+			setPhaseElapsed(0);
+			phaseIdxRef.current = 0;
+			phaseElapsedRef.current = 0;
+			sessionElapsedRef.current = 0;
+			setSessionElapsed(0);
+		}
 		runningRef.current = true;
 		setIsRunning(true);
 		lastTsRef.current = null;
@@ -135,6 +218,10 @@ export function useBreathTimer(
 		setPhaseElapsed(0);
 		phaseIdxRef.current = 0;
 		phaseElapsedRef.current = 0;
+		sessionElapsedRef.current = 0;
+		setSessionElapsed(0);
+		completionRef.current = false;
+		setCompleted(false);
 	}, [pause]);
 
 	const setModeIndex = useCallback(
@@ -154,6 +241,23 @@ export function useBreathTimer(
 	const prevMode = useCallback(() => {
 		setModeIndex((current) => current - 1);
 	}, [setModeIndex]);
+
+	const setSessionDuration = useCallback(
+		(durationSec: number) => {
+			const sanitized = sanitizeDuration(durationSec);
+			setSessionDurationState(sanitized);
+			sessionDurationRef.current = sanitized;
+			sessionElapsedRef.current = 0;
+			setSessionElapsed(0);
+			completionRef.current = false;
+			setCompleted(false);
+			setPhaseIdx(0);
+			setPhaseElapsed(0);
+			phaseIdxRef.current = 0;
+			phaseElapsedRef.current = 0;
+		},
+		[sanitizeDuration],
+	);
 
 	useEffect(
 		() => () => {
@@ -192,6 +296,12 @@ export function useBreathTimer(
 			phaseDuration,
 			progress,
 			isRunning,
+			sessionDuration,
+			sessionElapsed,
+			sessionRemaining: Math.max(0, sessionDuration - sessionElapsed),
+			sessionProgress:
+				sessionDuration > 0 ? Math.min(1, sessionElapsed / sessionDuration) : 0,
+			isComplete: completed,
 		},
 		{
 			start,
@@ -200,6 +310,7 @@ export function useBreathTimer(
 			nextMode,
 			prevMode,
 			setModeIndex,
+			setSessionDuration,
 		},
 	];
 }

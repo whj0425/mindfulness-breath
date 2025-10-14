@@ -10,17 +10,20 @@ export type RandomSlicePlaybackConfig = {
 
 export type PlaybackConfig = LoopPlaybackConfig | RandomSlicePlaybackConfig;
 
+export type ModePhases = {
+	inhale: number;
+	hold1: number;
+	exhale: number;
+	hold2: number;
+};
+
 export type Mode = {
 	key: string;
 	name: string;
 	note: string;
 	gradient: string;
-	phases: {
-		inhale: number;
-		hold1: number;
-		exhale: number;
-		hold2: number;
-	};
+	phases: ModePhases;
+	prompts?: Partial<Record<keyof ModePhases, string>>;
 };
 
 export type AmbientTrack = {
