@@ -152,10 +152,10 @@ export default function MindfulBreath() {
 				STORAGE_KEYS.companion,
 			);
 
-			let nextSoundKey: SoundKey | null = null;
+			let resolvedSoundKey: SoundKey | null = null;
 			if (storedSound && SOUNDS.some((sound) => sound.key === storedSound)) {
-				nextSoundKey = storedSound as SoundKey;
-				setSoundKey(nextSoundKey);
+				resolvedSoundKey = storedSound as SoundKey;
+				setSoundKey(resolvedSoundKey);
 			}
 
 			if (storedVolume != null) {
@@ -186,11 +186,9 @@ export default function MindfulBreath() {
 			}
 
 			if (storedCompanion === "true") {
-				const effectiveSound =
-					(nextSoundKey ?? soundKey) === "off"
-						? DEFAULT_SOUND_KEY
-						: (nextSoundKey ?? soundKey);
-				if ((nextSoundKey ?? soundKey) === "off") {
+				let effectiveSound = resolvedSoundKey ?? DEFAULT_SOUND_KEY;
+				if (effectiveSound === "off") {
+					effectiveSound = DEFAULT_SOUND_KEY;
 					setSoundKey(effectiveSound);
 				}
 				pauseTimer();
@@ -202,7 +200,7 @@ export default function MindfulBreath() {
 		} finally {
 			setHasHydrated(true);
 		}
-	}, [pauseTimer, prepareForStart, setModeIndex, setSessionDuration, soundKey]);
+	}, [pauseTimer, prepareForStart, setModeIndex, setSessionDuration]);
 
 	useEffect(() => {
 		if (!hasHydrated || typeof window === "undefined") return;
@@ -416,19 +414,6 @@ export default function MindfulBreath() {
 			body.style.overflow = "";
 		}
 	}, [isSettingsOpen]);
-
-	useEffect(() => {
-		if (typeof document === "undefined") return;
-		const root = document.documentElement;
-		if (!companionMode) {
-			root.classList.add("mindful-hide-scrollbar");
-		} else {
-			root.classList.remove("mindful-hide-scrollbar");
-		}
-		return () => {
-			root.classList.remove("mindful-hide-scrollbar");
-		};
-	}, [companionMode]);
 
 	const phaseLabel = PHASE_LABEL[phaseKey];
 	const phaseSupport = phaseDuration
@@ -788,10 +773,10 @@ function SettingsSheet({
 										key={preset.key}
 										onClick={() => onSelectPreset(preset.key)}
 										disabled={sessionLocked}
-										className={`flex h-10 min-w-[90px] items-center justify-center rounded-full px-4 text-[0.7rem] font-semibold uppercase tracking-[0.3em] transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
+										className={`flex h-10 min-w-[90px] items-center justify-center rounded-full border px-4 text-[0.7rem] font-semibold uppercase tracking-[0.3em] transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
 											isActive
-												? "bg-white/90 text-slate-900 shadow-[0_8px_25px_rgba(255,255,255,0.25)]"
-												: "bg-white/0 text-slate-200/80 hover:bg-white/10"
+												? "border-emerald-300/50 bg-emerald-500/25 text-emerald-100 shadow-[0_8px_24px_rgba(45,212,191,0.28)]"
+												: "border-white/10 text-slate-200/80 hover:bg-white/10"
 										}`}
 										aria-pressed={isActive}
 									>
