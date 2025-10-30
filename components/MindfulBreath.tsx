@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type RefObject,
+} from "react";
 
 import {
 	DEFAULT_SESSION_PRESET,
@@ -16,7 +23,10 @@ import {
 	PHASE_LABEL,
 	useBreathTimer,
 } from "./mindful-breath/hooks/useBreathTimer";
-import type { SoundKey } from "./mindful-breath/types";
+import type {
+	Mode,
+	SoundKey,
+} from "./mindful-breath/types";
 import { BreathRing } from "./mindful-breath/ui/BreathRing";
 import { DecorativeBackgroundLite } from "./mindful-breath/ui/DecorativeBackground";
 import { IconChevronLeft, IconChevronRight } from "./mindful-breath/ui/Icons";
@@ -30,6 +40,13 @@ const STORAGE_KEYS = {
 } as const;
 
 type SessionPresetKey = (typeof SESSION_PRESETS)[number]["key"];
+type ModeKey = (typeof MODES)[number]["key"];
+
+type PhaseLiveAnnouncement = {
+	key: ModeKey;
+	phase: keyof typeof PHASE_LABEL;
+	label: string;
+};
 
 export default function MindfulBreath() {
 	const [soundKey, setSoundKey] = useState<SoundKey>(DEFAULT_SOUND_KEY);
@@ -39,6 +56,12 @@ export default function MindfulBreath() {
 	const [selectedPresetKey, setSelectedPresetKey] =
 		useState<SessionPresetKey>(DEFAULT_SESSION_PRESET.key);
 	const [hasHydrated, setHasHydrated] = useState(false);
+	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+	const [phaseAnnouncement, setPhaseAnnouncement] =
+		useState<PhaseLiveAnnouncement | null>(null);
+
+	const settingsInitialFocusRef = useRef<HTMLButtonElement | null>(null);
+	const scrollLockRef = useRef<{ root: string; body: string } | null>(null);
 
 	const [
 		{
@@ -81,7 +104,6 @@ export default function MindfulBreath() {
 		[soundKey],
 	);
 	const activeSoundLabel = activeSound?.label ?? "Mute";
-	const volumePercent = Math.round(volume * 100);
 	const shouldPlayAudio = isRunning || companionMode;
 
 	const { prepareForStart, pauseAmbient } = useAmbientAudio({
@@ -126,7 +148,9 @@ export default function MindfulBreath() {
 			const storedVolume = window.localStorage.getItem(STORAGE_KEYS.volume);
 			const storedMode = window.localStorage.getItem(STORAGE_KEYS.mode);
 			const storedPreset = window.localStorage.getItem(STORAGE_KEYS.preset);
-			const storedCompanion = window.localStorage.getItem(STORAGE_KEYS.companion);
+			const storedCompanion = window.localStorage.getItem(
+				STORAGE_KEYS.companion,
+			);
 
 			let nextSoundKey: SoundKey | null = null;
 			if (storedSound && SOUNDS.some((sound) => sound.key === storedSound)) {
@@ -153,7 +177,9 @@ export default function MindfulBreath() {
 				SESSION_PRESETS.some((preset) => preset.key === storedPreset)
 			) {
 				setSelectedPresetKey(storedPreset as SessionPresetKey);
-				const preset = SESSION_PRESETS.find((item) => item.key === storedPreset);
+				const preset = SESSION_PRESETS.find(
+					(item) => item.key === storedPreset,
+				);
 				if (preset) {
 					setSessionDuration(preset.duration);
 				}
@@ -238,6 +264,18 @@ export default function MindfulBreath() {
 		[sessionLocked, setSessionDuration],
 	);
 
+	const handleSelectModeKey = useCallback(
+		(modeKey: ModeKey) => {
+			if (sessionLocked) return;
+			const nextIndex = MODES.findIndex((pattern) => pattern.key === modeKey);
+			if (nextIndex >= 0) {
+				setModeIndex(() => nextIndex);
+				resetTimer();
+			}
+		},
+		[resetTimer, sessionLocked, setModeIndex],
+	);
+
 	const handleStart = useCallback(async () => {
 		setBtnPop(true);
 		window.setTimeout(() => setBtnPop(false), 300);
@@ -304,6 +342,7 @@ export default function MindfulBreath() {
 
 	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
+			if (isSettingsOpen) return;
 			if (event.code === "Space") {
 				event.preventDefault();
 				handleStartPause();
@@ -321,7 +360,7 @@ export default function MindfulBreath() {
 		};
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [handleNext, handlePrev, handleStartPause, sessionLocked]);
+	}, [handleNext, handlePrev, handleStartPause, isSettingsOpen, sessionLocked]);
 
 	useEffect(() => {
 		if (!isComplete) return;
@@ -334,6 +373,62 @@ export default function MindfulBreath() {
 			disableCompanionMode();
 		}
 	}, [companionMode, disableCompanionMode, soundKey]);
+
+	useEffect(() => {
+		setPhaseAnnouncement({
+			key: mode.key,
+			phase: phaseKey,
+			label: PHASE_LABEL[phaseKey],
+		});
+	}, [mode.key, phaseKey]);
+
+	useEffect(() => {
+		if (!isSettingsOpen) return;
+		settingsInitialFocusRef.current?.focus({ preventScroll: true });
+	}, [isSettingsOpen]);
+
+	useEffect(() => {
+		if (typeof document === "undefined") return;
+		const root = document.documentElement;
+		const body = document.body;
+		if (isSettingsOpen) {
+			if (!scrollLockRef.current) {
+				scrollLockRef.current = {
+					root: root.style.overflow,
+					body: body.style.overflow,
+				};
+			}
+			root.style.overflow = "hidden";
+			body.style.overflow = "hidden";
+			return () => {
+				if (!scrollLockRef.current) return;
+				root.style.overflow = scrollLockRef.current.root;
+				body.style.overflow = scrollLockRef.current.body;
+				scrollLockRef.current = null;
+			};
+		}
+		if (scrollLockRef.current) {
+			root.style.overflow = scrollLockRef.current.root;
+			body.style.overflow = scrollLockRef.current.body;
+			scrollLockRef.current = null;
+		} else {
+			root.style.overflow = "";
+			body.style.overflow = "";
+		}
+	}, [isSettingsOpen]);
+
+	useEffect(() => {
+		if (typeof document === "undefined") return;
+		const root = document.documentElement;
+		if (!companionMode) {
+			root.classList.add("mindful-hide-scrollbar");
+		} else {
+			root.classList.remove("mindful-hide-scrollbar");
+		}
+		return () => {
+			root.classList.remove("mindful-hide-scrollbar");
+		};
+	}, [companionMode]);
 
 	const phaseLabel = PHASE_LABEL[phaseKey];
 	const phaseSupport = phaseDuration
@@ -350,299 +445,181 @@ export default function MindfulBreath() {
 	const sessionTotalLabel = formatClock(sessionDuration);
 	const progressPercent = Math.min(100, Math.max(0, sessionProgress * 100));
 	const phasePrompt = mode.prompts?.[phaseKey];
-	const lockMode = sessionLocked;
+	const sessionSummary = `${selectedPreset.label} · ${mode.name} · ${
+		soundKey === "off" ? "Sound off" : activeSoundLabel
+	}`;
 
 	return (
 		<div className="relative min-h-screen w-full overflow-hidden bg-slate-950 text-slate-100 antialiased selection:bg-emerald-300/30">
 			<DecorativeBackgroundLite />
 
-			<div className="relative flex min-h-screen w-full flex-col lg:flex-row">
-				<section className="flex flex-1 flex-col justify-between px-8 py-12 sm:px-12 lg:px-16 xl:px-20">
-					<header className="flex items-center justify-between gap-6">
-						<button
-							type="button"
-							onClick={handlePrev}
-							className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
-								lockMode
-									? "cursor-not-allowed bg-white/5 opacity-40"
-									: "bg-white/5 hover:bg-white/10"
-							}`}
-							aria-label="Previous breathing pattern"
-							disabled={lockMode}
-						>
-							<IconChevronLeft className="h-5 w-5 text-white/80" />
-						</button>
-						<div className="flex flex-col items-center text-center">
-							<span className="text-[0.65rem] uppercase tracking-[0.3em] text-white/60">
-								Pattern
-							</span>
-							<p className="mt-3 text-[clamp(1.5rem,2vw,2.4rem)] font-semibold tracking-tight text-white">
-								{mode.name}
-							</p>
-							{mode.note ? (
-								<p className="mt-1 max-w-xs text-sm text-slate-400">
-									{mode.note}
-								</p>
+			<div className="relative flex min-h-screen w-full flex-col px-6 py-8 sm:px-10 lg:px-20">
+					<header className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-6">
+						<span className="text-[0.65rem] uppercase tracking-[0.35em] text-white/60">
+							Mindful Breath
+						</span>
+						<div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+							{!companionMode ? (
+								<button
+									type="button"
+									onClick={() => setIsSettingsOpen(true)}
+									className="flex h-10 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20 sm:h-11 sm:px-5 sm:text-[0.65rem]"
+								>
+									Session Settings
+								</button>
 							) : null}
-						</div>
-						<button
-							type="button"
-							onClick={handleNext}
-							className={`flex h-12 w-12 items-center justify-center rounded-full border border-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
-								lockMode
-									? "cursor-not-allowed bg-white/5 opacity-40"
-									: "bg-white/5 hover:bg-white/10"
+							<button
+								type="button"
+								onClick={handleCompanionToggle}
+								className={`flex h-10 items-center justify-center rounded-full border border-white/20 px-4 text-[0.6rem] font-semibold uppercase tracking-[0.35em] transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 sm:h-11 sm:px-5 sm:text-[0.65rem] ${
+									companionMode
+									? "bg-emerald-500/25 text-emerald-100 hover:bg-emerald-500/35"
+									: "bg-white/5 text-slate-100/90 hover:bg-white/10"
 							}`}
-							aria-label="Next breathing pattern"
-							disabled={lockMode}
-						>
-							<IconChevronRight className="h-5 w-5 text-white/80" />
-						</button>
+								aria-pressed={companionMode}
+							>
+								{companionMode ? "Companion On" : "Companion Off"}
+							</button>
+						</div>
 					</header>
 
-					<div className="flex flex-1 flex-col items-center justify-center gap-12 py-12">
-						<div className="relative grid place-items-center">
-							{!companionMode ? (
+
+				<main
+					className={`flex flex-1 justify-center py-10 ${
+						companionMode ? "items-center" : ""
+					}`}
+				>
+					{companionMode ? (
+						<div className="flex w-full flex-1 items-center justify-center">
+							<div className="rounded-full border border-white/15 bg-white/5 px-8 py-4 text-xs font-semibold uppercase tracking-[0.4em] text-white/80 shadow-[0_8px_30px_rgba(15,118,110,0.2)]">
+								Companion Mode
+							</div>
+						</div>
+					) : (
+						<div className="flex w-full max-w-[1100px] flex-col items-center gap-10 text-center">
+							<div className="flex flex-col items-center gap-4">
+								<span className="text-[0.65rem] uppercase tracking-[0.35em] text-white/60">
+									Current Pattern
+								</span>
+								<h1 className="text-[clamp(2.2rem,5vw,3.4rem)] font-semibold tracking-tight text-white">
+									{mode.name}
+								</h1>
+								{mode.note ? (
+									<p className="max-w-xl text-sm text-slate-300">
+										{mode.note}
+									</p>
+								) : null}
+							</div>
+
+							<div className="relative grid place-items-center">
 								<BreathRing
 									gradient={mode.gradient}
 									phaseKey={phaseKey}
 									phaseElapsed={phaseElapsed}
 									phaseDuration={phaseDuration}
 								/>
-							) : (
-								<div className="w-[clamp(320px,45vw,520px)] rounded-[36px] border border-white/12 bg-slate-900/70 p-10 text-center shadow-2xl backdrop-blur">
-									<div className="text-[0.65rem] uppercase tracking-[0.35em] text-emerald-300/80">
-										Companion Mode
-									</div>
-									<div className="mt-4 text-2xl font-semibold text-white">
-										{activeSoundLabel}
-									</div>
-									<p className="mt-3 text-sm text-slate-300">
-										Ambient sound continues while the primary animation rests.
-									</p>
-									<div className="mt-8 flex flex-wrap justify-center gap-3">
-										<button
-											type="button"
-											onClick={disableCompanionMode}
-											className="rounded-full bg-emerald-500/25 px-6 py-2 text-sm font-medium text-emerald-100 backdrop-blur focus:outline-none focus:ring-2 focus:ring-white/25 hover:bg-emerald-500/35"
-										>
-											Return to Ring
-										</button>
-										<button
-											type="button"
-											onClick={() => {
-												setSoundKey("off");
-												disableCompanionMode();
-											}}
-											className="rounded-full border border-white/20 px-6 py-2 text-sm font-medium text-slate-100/90 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20"
-										>
-											Stop Audio
-										</button>
-									</div>
-								</div>
-							)}
-						</div>
+							</div>
 
-						<div className="w-full max-w-2xl">
-							<div className="flex flex-wrap items-center justify-center gap-4">
+							<div className="flex flex-col items-center gap-6">
 								<button
 									type="button"
 									onClick={handleStartPause}
-									className={`flex h-14 min-w-[140px] items-center justify-center rounded-full bg-gradient-to-r ${mode.gradient} px-8 text-base font-semibold text-white shadow-[0_12px_45px_rgba(56,189,248,0.25)] transition-transform focus:outline-none focus:ring-2 focus:ring-white/30 ${
+									className={`flex h-14 min-w-[160px] items-center justify-center rounded-full bg-gradient-to-r ${mode.gradient} px-10 text-base font-semibold text-white shadow-[0_12px_45px_rgba(56,189,248,0.25)] transition-transform focus:outline-none focus:ring-2 focus:ring-white/30 ${
 										btnPop ? "btn-pop" : ""
 									}`}
 								>
 									{startLabel}
 								</button>
-								{!isRunning && canReset ? (
-									<button
-										type="button"
-										onClick={handleReset}
-										className="flex h-14 min-w-[120px] items-center justify-center rounded-full border border-white/25 bg-white/5 px-6 text-sm font-semibold text-slate-100/90 transition-colors hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20"
-									>
-										Reset
-									</button>
-								) : null}
-								<button
-									type="button"
-									onClick={handleCompanionToggle}
-									className={`flex h-14 items-center justify-center rounded-full border border-white/25 px-6 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
-										companionMode
-											? "bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30"
-											: "bg-white/5 text-slate-100/90 hover:bg-white/10"
-									}`}
-									aria-pressed={companionMode}
-								>
-									{companionMode ? "Companion On" : "Companion Off"}
-								</button>
-							</div>
-							{(companionMode || soundKey !== "off") && (
-								<div className="mt-6 flex w-full flex-col items-center px-4">
-									<label className="flex w-full max-w-xs flex-col gap-2 text-[0.65rem] uppercase tracking-[0.3em] text-slate-400">
-										<span>Companion Volume</span>
-										<input
-											type="range"
-											min={0}
-											max={1}
-											step={0.01}
-											value={volume}
-											onChange={(event) => setVolume(Number(event.target.value))}
-											className="accent-emerald-400"
-											aria-label="Background volume"
-											disabled={soundKey === "off" && !companionMode}
+								<div className="flex flex-wrap items-center justify-center gap-3">
+									{!isRunning && canReset ? (
+										<button
+											type="button"
+											onClick={handleReset}
+											className="flex h-11 min-w-[120px] items-center justify-center rounded-full border border-white/20 bg-white/5 px-6 text-xs font-semibold uppercase tracking-[0.3em] text-slate-100/90 transition-colors hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20"
+										>
+											Reset
+										</button>
+									) : null}
+								</div>
+								<p className="text-sm text-slate-300/80">{sessionSummary}</p>
+								<div className="flex w-full max-w-md flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-left text-sm text-slate-200 shadow-inner">
+									<div className="flex w-full items-center justify-between text-xs uppercase tracking-[0.3em] text-white/60">
+										<span>Session</span>
+										<span>{sessionRemainingLabel} · remain</span>
+									</div>
+									<div className="flex w-full items-baseline justify-between gap-4">
+										<div className="text-2xl font-semibold text-white">
+											{sessionRemainingLabel}
+										</div>
+										<div className="text-xs uppercase tracking-[0.35em] text-slate-400">
+											of {sessionTotalLabel}
+										</div>
+									</div>
+									<div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+										<div
+											className={`h-full rounded-full bg-gradient-to-r ${mode.gradient} transition-[width] duration-300 ease-out`}
+											style={{ width: `${progressPercent}%` }}
 										/>
-										<span className="text-[0.65rem] text-slate-500">
-											Level {volumePercent}%
-										</span>
-									</label>
-								</div>
-							)}
-
-							<div className="mt-10 flex flex-col items-center gap-3">
-								<span className="text-[0.65rem] uppercase tracking-[0.35em] text-slate-500">
-									Duration
-								</span>
-								<div
-									className="flex flex-wrap justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1"
-									role="group"
-									aria-label="Select session duration"
-								>
-									{SESSION_PRESETS.map((preset) => {
-										const isActive = preset.key === selectedPresetKey;
-										return (
-											<button
-												type="button"
-												key={preset.key}
-												onClick={() => handleSelectPreset(preset.key)}
-												className={`flex h-11 min-w-[92px] items-center justify-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.3em] transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
-													isActive
-														? `bg-gradient-to-r ${mode.gradient} text-white shadow-[0_6px_20px_rgba(56,189,248,0.35)]`
-														: "bg-white/0 text-slate-300 hover:bg-white/10"
-												}`}
-												disabled={sessionLocked}
-												aria-pressed={isActive}
-											>
-												{preset.label}
-											</button>
-										);
-									})}
+									</div>
+									{phasePrompt ? (
+										<p className="rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-slate-200/90">
+											{phasePrompt}
+										</p>
+									) : null}
+									{upcomingPhase ? (
+										<div className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
+											<span className="font-medium text-white/90">
+												Up next · {upcomingPhase.label}
+											</span>
+											<span className="text-slate-400">
+												{upcomingPhase.duration > 0
+													? `${upcomingPhase.duration}s`
+													: "Transition"}
+											</span>
+										</div>
+									) : null}
+									<div className="flex w-full items-center justify-between text-xs text-slate-400">
+										<span>{phaseLabel}</span>
+										<span>{phaseSupport}</span>
+									</div>
 								</div>
 							</div>
 						</div>
-					</div>
+					)}
+				</main>
 
-					<footer className="mt-12 flex items-center justify-between text-[0.65rem] uppercase tracking-[0.35em] text-white/50">
-						<span>Mindful Breath</span>
-						<span>
-							Space · {isRunning ? "Pause" : sessionElapsed > 0 ? "Resume" : "Begin"}
-						</span>
+				{companionMode ? null : (
+					<footer className="mt-8 flex flex-col items-center gap-2 text-xs text-slate-500">
+						<span>Space toggles start / pause</span>
+						<span>Open settings to adjust rhythm, duration, and sound</span>
 					</footer>
-				</section>
+				)}
+			</div>
 
-				<aside className="flex w-full flex-col gap-8 border-t border-white/10 bg-slate-950/70 px-8 py-12 backdrop-blur-sm lg:w-[340px] lg:border-l lg:border-t-0 lg:px-10 xl:w-[380px]">
-					<div>
-						<span className="text-[0.65rem] uppercase tracking-[0.35em] text-white/60">
-							Session
-						</span>
-						<div className="mt-3 flex items-center justify-between text-sm text-slate-300">
-							<span className="tabular-nums text-base font-semibold text-white">
-								{sessionRemainingLabel}
-							</span>
-							<span className="text-xs uppercase tracking-[0.3em] text-slate-500">
-								of {sessionTotalLabel}
-							</span>
-						</div>
-						<div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-							<div
-								className={`h-full rounded-full bg-gradient-to-r ${mode.gradient} transition-[width] duration-300 ease-out`}
-								style={{ width: `${progressPercent}%` }}
-							/>
-						</div>
-						<div className="mt-3 flex gap-2 text-xs text-slate-500">
-							<span>Preset</span>
-							<span className="font-medium text-slate-300">{selectedPreset.label}</span>
-						</div>
-					</div>
+			{isSettingsOpen ? (
+				<SettingsSheet
+					onClose={() => setIsSettingsOpen(false)}
+					initialFocusRef={settingsInitialFocusRef}
+					mode={mode}
+					selectedPresetKey={selectedPresetKey}
+					sessionLocked={sessionLocked}
+					onSelectPreset={handleSelectPreset}
+					onSelectMode={handleSelectModeKey}
+					soundKey={soundKey}
+					onSelectSound={setSoundKey}
+					volume={volume}
+					onVolumeChange={setVolume}
+					canUseShortcuts={!sessionLocked}
+					prevMode={handlePrev}
+					nextMode={handleNext}
+				/>
+			) : null}
 
-					<div>
-						<span className="text-[0.65rem] uppercase tracking-[0.35em] text-white/60">
-							Current Phase
-						</span>
-						<div className="mt-3 text-lg font-semibold text-white">{phaseLabel}</div>
-						<div className="text-xs text-slate-400">{phaseSupport}</div>
-						{phasePrompt ? (
-							<p className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200 shadow-inner">
-								{phasePrompt}
-							</p>
-						) : null}
-					</div>
-
-					{upcomingPhase ? (
-						<div>
-							<span className="text-[0.65rem] uppercase tracking-[0.35em] text-white/60">
-								Up Next
-							</span>
-							<div className="mt-3 flex items-center justify-between text-sm text-slate-300">
-								<span className="font-medium text-white">
-									{upcomingPhase.label}
-								</span>
-								<span className="text-xs text-slate-500">
-									{upcomingPhase.duration > 0
-										? `${upcomingPhase.duration}s`
-										: "Transition"}
-								</span>
-							</div>
-							{upcomingPhase.prompt ? (
-								<p className="mt-2 text-sm text-slate-300">
-									{upcomingPhase.prompt}
-								</p>
-							) : null}
-						</div>
-					) : null}
-
-					<div>
-						<span className="text-[0.65rem] uppercase tracking-[0.35em] text-white/60">
-							Soundscape
-						</span>
-						<div className="mt-3 text-sm text-slate-300">
-							Active · <span className="font-medium text-white">{activeSoundLabel}</span>
-						</div>
-						<div className="mt-3 flex flex-wrap gap-2">
-							{SOUNDS.map((sound) => {
-								const active = sound.key === soundKey;
-								return (
-									<button
-										key={sound.key}
-										type="button"
-										onClick={() => setSoundKey(sound.key)}
-										className={`flex h-9 items-center justify-center rounded-full px-3 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
-											active
-												? "bg-white/20 text-white"
-												: "bg-white/5 text-slate-200/80 hover:bg-white/10"
-										}`}
-										aria-pressed={active}
-									>
-										{sound.label}
-									</button>
-								);
-							})}
-						</div>
-					</div>
-
-					<div className="mt-auto">
-						<span className="text-[0.65rem] uppercase tracking-[0.35em] text-white/60">
-							Shortcuts
-						</span>
-						<ul className="mt-3 space-y-1 text-xs text-slate-500">
-							<li>
-								<span className="font-medium text-slate-300">Space</span> Start / Pause
-							</li>
-							<li>
-								<span className="font-medium text-slate-300">← / →</span> Switch pattern (idle)
-							</li>
-						</ul>
-					</div>
-				</aside>
+			<div
+				aria-live="polite"
+				className="sr-only"
+			>
+				{phaseAnnouncement ? `${phaseAnnouncement.label} phase` : ""}
 			</div>
 
 			<style jsx>{`
@@ -661,6 +638,231 @@ export default function MindfulBreath() {
 					}
 				}
 			`}</style>
+		</div>
+	);
+}
+
+type SettingsSheetProps = {
+	onClose: () => void;
+	initialFocusRef: RefObject<HTMLButtonElement>;
+	mode: Mode;
+	selectedPresetKey: SessionPresetKey;
+	sessionLocked: boolean;
+	onSelectPreset: (key: SessionPresetKey) => void;
+	onSelectMode: (key: ModeKey) => void;
+	soundKey: SoundKey;
+	onSelectSound: (key: SoundKey) => void;
+	volume: number;
+	onVolumeChange: (value: number) => void;
+	canUseShortcuts: boolean;
+	prevMode: () => void;
+	nextMode: () => void;
+};
+
+function SettingsSheet({
+	onClose,
+	initialFocusRef,
+	mode,
+	selectedPresetKey,
+	sessionLocked,
+	onSelectPreset,
+	onSelectMode,
+	soundKey,
+	onSelectSound,
+	volume,
+	onVolumeChange,
+	canUseShortcuts,
+	prevMode,
+	nextMode,
+}: SettingsSheetProps) {
+	return (
+		<div
+			className="fixed inset-0 z-40 flex items-end justify-center sm:items-center"
+			role="dialog"
+			aria-modal="true"
+			aria-label="Session settings"
+		>
+			<button
+				type="button"
+				onClick={onClose}
+				className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+				aria-hidden
+			/>
+			<div className="relative w-full max-w-[720px] rounded-t-[32px] border border-white/15 bg-slate-950/95 px-6 py-8 shadow-2xl backdrop-blur-lg sm:rounded-3xl sm:px-10">
+				<div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<h2 className="text-xl font-semibold text-white">Session settings</h2>
+						<p className="mt-1 text-sm text-slate-300/80">
+							Adjust rhythm, duration, and ambiance without leaving the session.
+						</p>
+					</div>
+					<div className="flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-slate-400">
+						<button
+							type="button"
+							onClick={prevMode}
+							disabled={sessionLocked}
+							className={`hidden h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 sm:flex ${
+								sessionLocked
+									? "cursor-not-allowed opacity-40"
+									: "bg-white/5 hover:bg-white/10"
+							}`}
+							aria-label="Previous breathing pattern"
+						>
+							<IconChevronLeft className="h-4 w-4" />
+						</button>
+						<button
+							type="button"
+							onClick={nextMode}
+							disabled={sessionLocked}
+							className={`hidden h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 sm:flex ${
+								sessionLocked
+									? "cursor-not-allowed opacity-40"
+									: "bg-white/5 hover:bg-white/10"
+							}`}
+							aria-label="Next breathing pattern"
+						>
+							<IconChevronRight className="h-4 w-4" />
+						</button>
+					</div>
+				</div>
+
+				<div className="max-h-[65vh] space-y-8 overflow-y-auto overscroll-contain pr-1 sm:max-h-[70vh]">
+					<section>
+						<header className="mb-3 flex items-center justify-between text-xs uppercase tracking-[0.35em] text-white/60">
+							<span>Breathing rhythm</span>
+							{sessionLocked ? (
+								<span className="text-[0.6rem] text-amber-300/80">
+									Lock lifts after reset
+								</span>
+							) : null}
+						</header>
+						<div className="flex flex-col gap-3">
+							{MODES.map((pattern) => {
+								const active = pattern.key === mode.key;
+								return (
+									<button
+										key={pattern.key}
+										type="button"
+										onClick={() => onSelectMode(pattern.key)}
+										disabled={sessionLocked}
+										className={`w-full rounded-3xl border border-white/10 px-5 py-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
+											active
+												? "bg-white/10 text-white"
+												: "bg-white/0 text-slate-200/90 hover:bg-white/5"
+										}`}
+										aria-pressed={active}
+									>
+										<div className="flex items-center justify-between">
+											<span className="text-base font-semibold text-white">
+												{pattern.name}
+											</span>
+											<span className="text-xs uppercase tracking-[0.3em] text-white/50">
+												{pattern.key.replace(/-/g, " ")}
+											</span>
+										</div>
+										{pattern.note ? (
+											<p className="mt-2 text-sm text-slate-300/90">
+												{pattern.note}
+											</p>
+										) : null}
+									</button>
+								);
+							})}
+						</div>
+					</section>
+
+					<section>
+						<header className="mb-3 text-xs uppercase tracking-[0.35em] text-white/60">
+							<span>Session duration</span>
+						</header>
+						<div
+							className="flex flex-wrap gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1"
+							role="group"
+							aria-label="Select session duration"
+						>
+							{SESSION_PRESETS.map((preset) => {
+								const isActive = preset.key === selectedPresetKey;
+								return (
+									<button
+										type="button"
+										key={preset.key}
+										onClick={() => onSelectPreset(preset.key)}
+										disabled={sessionLocked}
+										className={`flex h-10 min-w-[90px] items-center justify-center rounded-full px-4 text-[0.7rem] font-semibold uppercase tracking-[0.3em] transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
+											isActive
+												? "bg-white/90 text-slate-900 shadow-[0_8px_25px_rgba(255,255,255,0.25)]"
+												: "bg-white/0 text-slate-200/80 hover:bg-white/10"
+										}`}
+										aria-pressed={isActive}
+									>
+										{preset.label}
+									</button>
+								);
+							})}
+						</div>
+					</section>
+
+					<section>
+						<header className="mb-3 flex items-center justify-between text-xs uppercase tracking-[0.35em] text-white/60">
+							<span>Soundscape</span>
+							<span className="text-[0.6rem] text-slate-400">
+								Plays on start or in companion mode
+							</span>
+						</header>
+						<div className="flex flex-wrap gap-2">
+							{SOUNDS.map((sound) => {
+								const active = sound.key === soundKey;
+								return (
+									<button
+										key={sound.key}
+										type="button"
+										onClick={() => onSelectSound(sound.key)}
+										className={`flex h-9 items-center justify-center rounded-full px-3 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
+											active
+												? "bg-emerald-500/25 text-emerald-100"
+												: "bg-white/5 text-slate-200/80 hover:bg-white/10"
+										}`}
+										aria-pressed={active}
+									>
+										{sound.label}
+									</button>
+								);
+							})}
+						</div>
+						<label className="mt-4 flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-slate-400">
+							<span>Volume</span>
+							<input
+								type="range"
+								min={0}
+								max={1}
+								step={0.01}
+								value={volume}
+								onChange={(event) => onVolumeChange(Number(event.target.value))}
+								className="accent-emerald-400"
+								aria-label="Background volume"
+								disabled={soundKey === "off"}
+							/>
+							<span className="text-[0.65rem] text-slate-500">
+								Level {Math.round(volume * 100)}%
+							</span>
+						</label>
+					</section>
+				</div>
+
+				<div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<div className="text-xs text-slate-500">
+						{canUseShortcuts ? "Use ← → to switch patterns." : "Reset to switch patterns."}
+					</div>
+					<button
+						type="button"
+						onClick={onClose}
+						ref={initialFocusRef}
+						className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-6 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_30px_rgba(56,189,248,0.35)] transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-emerald-200"
+					>
+						Done
+					</button>
+				</div>
+			</div>
 		</div>
 	);
 }
