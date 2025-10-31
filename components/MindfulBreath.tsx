@@ -507,7 +507,7 @@ export default function MindfulBreath() {
 											<button
 												type="button"
 												onClick={handleReset}
-												className="flex h-12 min-w-[150px] items-center justify-center rounded-full border border-white/20 bg-white/5 px-9 text-base font-semibold text-white/85 transition-colors hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/25"
+												className={`flex h-12 min-w-[150px] items-center justify-center rounded-full bg-gradient-to-r ${mode.gradient} px-9 text-base font-semibold text-white shadow-[0_12px_40px_rgba(56,189,248,0.25)] transition-transform focus:outline-none focus:ring-2 focus:ring-white/30`}
 											>
 												Reset
 											</button>
