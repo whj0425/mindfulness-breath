@@ -14,7 +14,6 @@ import {
 	DEFAULT_SOUND_KEY,
 	DEFAULT_VOLUME,
 	MODES,
-	ORDER,
 	SESSION_PRESETS,
 	SOUNDS,
 } from "./mindful-breath/constants";
@@ -73,7 +72,6 @@ export default function MindfulBreath() {
 			sessionDuration,
 			sessionElapsed,
 			sessionRemaining,
-			sessionProgress,
 			isComplete,
 		},
 		{
@@ -111,25 +109,6 @@ export default function MindfulBreath() {
 		isRunning: shouldPlayAudio,
 		volume,
 	});
-
-	const upcomingPhase = useMemo(() => {
-		const currentIndex = ORDER.indexOf(phaseKey);
-		if (currentIndex === -1) {
-			return null;
-		}
-		for (let step = 1; step <= ORDER.length; step += 1) {
-			const candidateKey = ORDER[(currentIndex + step) % ORDER.length];
-			if (mode.phases[candidateKey] > 0) {
-				return {
-					key: candidateKey,
-					label: PHASE_LABEL[candidateKey],
-					duration: mode.phases[candidateKey],
-					prompt: mode.prompts?.[candidateKey],
-				};
-			}
-		}
-		return null;
-	}, [mode.phases, mode.prompts, phaseKey]);
 
 	useEffect(() => {
 		if (process.env.NODE_ENV !== "production") {
@@ -417,7 +396,7 @@ export default function MindfulBreath() {
 
 	const phaseLabel = PHASE_LABEL[phaseKey];
 	const phaseSupport = phaseDuration
-		? `${Math.max(0, Math.ceil(phaseDuration - phaseElapsed))}s remaining`
+		? `${Math.max(0, Math.round(phaseDuration - phaseElapsed))}s remaining`
 		: "Soft rhythm in progress";
 	const startLabel = isRunning
 		? "Pause"
@@ -428,7 +407,6 @@ export default function MindfulBreath() {
 		: "Begin";
 	const sessionRemainingLabel = formatClock(sessionRemaining);
 	const sessionTotalLabel = formatClock(sessionDuration);
-	const progressPercent = Math.min(100, Math.max(0, sessionProgress * 100));
 	const phasePrompt = mode.prompts?.[phaseKey];
 	const sessionSummary = `${selectedPreset.label} · ${mode.name} · ${
 		soundKey === "off" ? "Sound off" : activeSoundLabel
@@ -504,16 +482,6 @@ export default function MindfulBreath() {
 											of {sessionTotalLabel}
 										</span>
 									</div>
-									<div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-										<div
-											className={`h-full rounded-full bg-gradient-to-r ${mode.gradient} transition-[width] duration-300 ease-out`}
-											style={{ width: `${progressPercent}%` }}
-										/>
-									</div>
-									<div className="flex w-full justify-between text-xs text-slate-400">
-										<span>{phaseLabel}</span>
-										<span>{phaseSupport}</span>
-									</div>
 								</div>
 
 								<div className="flex flex-col items-center gap-8">
@@ -548,31 +516,18 @@ export default function MindfulBreath() {
 								</div>
 
 								<div className="flex w-full max-w-[520px] flex-col items-end gap-2 self-start text-sm text-slate-300/85 lg:text-right">
+									<div className="flex w-full flex-col items-end gap-1 text-xs text-slate-400 min-h-[1.75rem]">
+										<span className="text-xs font-medium uppercase tracking-[0.35em] text-white/70">
+											{phaseLabel}
+										</span>
+										<span>{phaseSupport}</span>
+									</div>
 									<span className="self-end text-xs uppercase tracking-[0.35em] text-white/60">
 										Guidance
 									</span>
 									<p className="min-h-[1.75rem] w-full text-slate-200">
 										{phasePrompt ?? "Settle into the rhythm and follow each breath."}
 									</p>
-									{upcomingPhase ? (
-										<div className="flex w-full flex-col items-end gap-1 text-xs text-slate-400">
-											<span className="text-xs font-medium uppercase tracking-[0.35em] text-white/70">
-												Up next · {upcomingPhase.label}
-											</span>
-											<span>
-												{upcomingPhase.duration > 0
-													? `${upcomingPhase.duration}s`
-													: "Transition"}
-											</span>
-											{upcomingPhase.prompt ? (
-												<span className="text-[0.7rem] text-slate-400/80">
-													{upcomingPhase.prompt}
-												</span>
-											) : null}
-										</div>
-									) : (
-										<div className="min-h-[1.75rem]" />
-									)}
 								</div>
 							</div>
 						</div>
