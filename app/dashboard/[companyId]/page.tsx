@@ -4,11 +4,11 @@ import { AccessSummary } from "@/components/access/AccessSummary";
 import { resolveAccess } from "@/lib/whop-access";
 
 type DashboardPageParams = {
-	params: { companyId: string };
+	params: Promise<{ companyId: string }>;
 };
 
 export default async function DashboardPage({ params }: DashboardPageParams) {
-	const { companyId } = params;
+	const { companyId } = await params;
 	const result = await resolveAccess("company", companyId);
 
 	return (

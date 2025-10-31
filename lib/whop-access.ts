@@ -24,7 +24,7 @@ export async function resolveAccess(
 	kind: AccessKind,
 	id: string,
 ): Promise<AccessResolution> {
-	const headerList = headers();
+	const headerList = await headers();
 
 	try {
 		let userId: string;
@@ -58,7 +58,9 @@ export async function resolveAccess(
 		]);
 
 		const targetName =
-			kind === "company" ? target.title ?? "Unknown company" : target.name ?? "Unknown experience";
+			kind === "company" 
+				? ("title" in target ? target.title : null) ?? "Unknown company" 
+				: ("name" in target ? target.name : null) ?? "Unknown experience";
 
 		return {
 			ok: true,

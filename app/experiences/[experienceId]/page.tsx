@@ -4,13 +4,13 @@ import { AccessSummary } from "@/components/access/AccessSummary";
 import { resolveAccess } from "@/lib/whop-access";
 
 type ExperiencePageParams = {
-	params: { experienceId: string };
+	params: Promise<{ experienceId: string }>;
 };
 
 export default async function ExperiencePage({
 	params,
 }: ExperiencePageParams) {
-	const { experienceId } = params;
+	const { experienceId } = await params;
 	const result = await resolveAccess("experience", experienceId);
 
 	return (

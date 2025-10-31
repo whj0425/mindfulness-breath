@@ -583,7 +583,7 @@ export default function MindfulBreath() {
 
 type SettingsSheetProps = {
 	onClose: () => void;
-	initialFocusRef: RefObject<HTMLButtonElement>;
+	initialFocusRef: RefObject<HTMLButtonElement | null>;
 	mode: Mode;
 	selectedPresetKey: SessionPresetKey;
 	sessionLocked: boolean;
