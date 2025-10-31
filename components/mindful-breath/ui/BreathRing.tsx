@@ -18,99 +18,77 @@ export function BreathRing({
 	const ratio =
 		phaseDuration > 0
 			? Math.min(1, Math.max(0, phaseElapsed / phaseDuration))
-			: phaseKey === "hold2"
-			? 0
-			: 1;
+			: 0;
 
-	const eased = easeOutQuint(ratio);
-	const angle = eased * 360;
+	let scale = 1;
+	if (phaseKey === "inhale") {
+		scale = 0.52 + easeInOutCubic(ratio) * 0.48;
+	} else if (phaseKey === "exhale") {
+		scale = 1 - easeInOutCubic(ratio) * 0.48;
+	} else if (phaseKey === "hold1") {
+		scale = 1;
+	} else if (phaseKey === "hold2") {
+		scale = 0.52;
+	}
 
-	const { primary, secondary } = getGradientColors(gradient);
-
-	const ringStyle: CSSProperties = {
-		background: `conic-gradient(from -90deg, ${hexToRgba(
-			primary,
-			0.6,
-		)} ${angle}deg, rgba(255,255,255,0.08) ${angle}deg 360deg)`,
-		boxShadow: `0 25px 65px ${hexToRgba(secondary, 0.25)}`,
-	};
-
-	const innerStyle: CSSProperties = {
-		background: `radial-gradient(circle at 40% 35%, rgba(255,255,255,0.5), rgba(15,23,42,0.55))`,
+	const ballStyle: CSSProperties = {
+		transform: `scale(${scale})`,
+		background: `linear-gradient(135deg, ${getGradientStyle(gradient)})`,
+		boxShadow: `0 0 60px ${getGlowColor(gradient)}, 0 0 120px ${getGlowColor(gradient, 0.3)}`,
+		transition:
+			phaseKey === "hold1" || phaseKey === "hold2"
+				? "transform 0.3s ease"
+				: "none",
 	};
 
 	return (
-		<div className="relative grid place-items-center">
+		<div className="relative grid place-items-center -mt-12">
 			<div className="relative aspect-square w-[clamp(320px,34vw,620px)]">
 				<div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-					<div className="breath-ring" style={ringStyle}>
-						<div className="breath-ring__inner" style={innerStyle} />
-					</div>
+					<div className="breath-ball" style={ballStyle} />
 				</div>
 			</div>
 			<style jsx>{`
-				.breath-ring {
-					height: 64%;
-					width: 64%;
-					border-radius: 9999px;
-					padding: 6%;
-					transition: background 0.5s ease;
-					background-clip: padding-box;
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					position: relative;
-				}
-				.breath-ring::before {
-					content: "";
-					position: absolute;
-					inset: 0;
-					border-radius: 9999px;
-					border: 1px solid rgba(255, 255, 255, 0.06);
-				}
-				.breath-ring__inner {
-					height: 100%;
-					width: 100%;
-					border-radius: 9999px;
-					box-shadow:
-						inset 0 18px 45px rgba(255, 255, 255, 0.18),
-						inset 0 -28px 60px rgba(15, 23, 42, 0.35);
+				.breath-ball {
+					width: 400px;
+					height: 400px;
+					border-radius: 50%;
+					will-change: transform;
 				}
 			`}</style>
 		</div>
 	);
 }
 
-function getGradientColors(gradient: Mode["gradient"]): {
-	primary: string;
-	secondary: string;
-} {
-	let primary = "#38bdf8";
-	let secondary = "#34d399";
+function getGradientStyle(gradient: Mode["gradient"]): string {
 	if (gradient.includes("violet")) {
-		primary = "#c4b5fd";
-		secondary = "#f472b6";
-	} else if (gradient.includes("sky")) {
-		primary = "#60a5fa";
-		secondary = "#6366f1";
-	} else if (gradient.includes("rose")) {
-		primary = "#fb7185";
-		secondary = "#f97316";
+		return "#c4b5fd, #f472b6";
 	}
-	return { primary, secondary };
+	if (gradient.includes("sky")) {
+		return "#60a5fa, #6366f1";
+	}
+	if (gradient.includes("rose")) {
+		return "#fb7185, #f97316";
+	}
+	return "#38bdf8, #34d399";
 }
 
-function hexToRgba(hex: string, alpha: number): string {
-	const normalized = hex.replace("#", "");
-	const bigint = Number.parseInt(normalized, 16);
-	const r = (bigint >> 16) & 255;
-	const g = (bigint >> 8) & 255;
-	const b = bigint & 255;
-	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+function getGlowColor(gradient: Mode["gradient"], opacity = 0.6): string {
+	if (gradient.includes("violet")) {
+		return `rgba(196, 181, 253, ${opacity})`;
+	}
+	if (gradient.includes("sky")) {
+		return `rgba(96, 165, 250, ${opacity})`;
+	}
+	if (gradient.includes("rose")) {
+		return `rgba(251, 113, 133, ${opacity})`;
+	}
+	return `rgba(56, 189, 248, ${opacity})`;
 }
 
-function easeOutQuint(t: number): number {
+function easeInOutCubic(t: number): number {
 	const clamped = Math.min(1, Math.max(0, t));
-	const inv = 1 - clamped;
-	return 1 - inv * inv * inv * inv * inv;
+	return clamped < 0.5
+		? 4 * clamped * clamped * clamped
+		: 1 - (-2 * clamped + 2) ** 3 / 2;
 }
