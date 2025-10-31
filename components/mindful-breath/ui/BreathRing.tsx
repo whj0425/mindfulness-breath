@@ -21,23 +21,36 @@ export function BreathRing({
 			: 0;
 
 	let scale = 1;
+	let glowIntensity = 1;
+
 	if (phaseKey === "inhale") {
 		scale = 0.52 + easeInOutCubic(ratio) * 0.48;
+		glowIntensity = 0.4 + easeInOutCubic(ratio) * 0.6;
 	} else if (phaseKey === "exhale") {
 		scale = 1 - easeInOutCubic(ratio) * 0.48;
+		glowIntensity = 1 - easeInOutCubic(ratio) * 0.6;
 	} else if (phaseKey === "hold1") {
 		scale = 1;
+		glowIntensity = 1;
 	} else if (phaseKey === "hold2") {
 		scale = 0.52;
+		glowIntensity = 0.4;
 	}
+
+	const { primary, secondary } = getGradientColors(gradient);
 
 	const ballStyle: CSSProperties = {
 		transform: `scale(${scale})`,
-		background: `linear-gradient(135deg, ${getGradientStyle(gradient)})`,
-		boxShadow: `0 0 60px ${getGlowColor(gradient)}, 0 0 120px ${getGlowColor(gradient, 0.3)}`,
+		background: `radial-gradient(circle at 35% 35%, ${primary}, ${secondary} 60%, ${getDarkColor(gradient)} 90%)`,
+		boxShadow: `
+			0 0 ${50 * glowIntensity}px ${getGlowColor(gradient, 0.8 * glowIntensity)},
+			0 0 ${100 * glowIntensity}px ${getGlowColor(gradient, 0.5 * glowIntensity)},
+			0 0 ${160 * glowIntensity}px ${getGlowColor(gradient, 0.3 * glowIntensity)},
+			inset 0 -40px 80px ${getGlowColor(gradient, 0.2)}
+		`,
 		transition:
 			phaseKey === "hold1" || phaseKey === "hold2"
-				? "transform 0.3s ease"
+				? "transform 0.3s ease, box-shadow 0.3s ease"
 				: "none",
 	};
 
@@ -60,17 +73,33 @@ export function BreathRing({
 	);
 }
 
-function getGradientStyle(gradient: Mode["gradient"]): string {
+function getGradientColors(gradient: Mode["gradient"]): {
+	primary: string;
+	secondary: string;
+} {
 	if (gradient.includes("violet")) {
-		return "#c4b5fd, #f472b6";
+		return { primary: "#c4b5fd", secondary: "#d946ef" };
 	}
 	if (gradient.includes("sky")) {
-		return "#60a5fa, #6366f1";
+		return { primary: "#7dd3fc", secondary: "#6366f1" };
 	}
 	if (gradient.includes("rose")) {
-		return "#fb7185, #f97316";
+		return { primary: "#fb7185", secondary: "#f97316" };
 	}
-	return "#38bdf8, #34d399";
+	return { primary: "#5eead4", secondary: "#10b981" };
+}
+
+function getDarkColor(gradient: Mode["gradient"]): string {
+	if (gradient.includes("violet")) {
+		return "#7c3aed";
+	}
+	if (gradient.includes("sky")) {
+		return "#4338ca";
+	}
+	if (gradient.includes("rose")) {
+		return "#dc2626";
+	}
+	return "#047857";
 }
 
 function getGlowColor(gradient: Mode["gradient"], opacity = 0.6): string {
