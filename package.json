@@ -6,7 +6,8 @@
 		"dev": "whop-proxy --command 'next dev --turbopack'",
 		"build": "next build",
 		"start": "next start",
-		"lint": "next lint"
+		"lint": "next lint",
+		"postinstall": "node scripts/ensure-frosted-styles.mjs"
 	},
 	"dependencies": {
 		"@vercel/functions": "^2.0.3",
