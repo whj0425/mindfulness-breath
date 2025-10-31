@@ -439,7 +439,7 @@ export default function MindfulBreath() {
 			<DecorativeBackgroundLite />
 
 			<div className="relative flex min-h-screen w-full flex-col px-6 py-8 sm:px-10 lg:px-20">
-					<header className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-6">
+					<header className="mx-auto flex w-full max-w-[1500px] items-center justify-between gap-6">
 						<span className="text-[0.65rem] uppercase tracking-[0.35em] text-white/60">
 							Mindful Breath
 						</span>
@@ -481,64 +481,28 @@ export default function MindfulBreath() {
 							</div>
 						</div>
 					) : (
-						<div className="flex w-full max-w-[1100px] flex-col items-center gap-10 text-center">
-							<div className="flex flex-col items-center gap-4">
-								<span className="text-[0.65rem] uppercase tracking-[0.35em] text-white/60">
-									Current Pattern
-								</span>
-								<h1 className="text-[clamp(2.2rem,5vw,3.4rem)] font-semibold tracking-tight text-white">
+						<div className="mx-auto flex w-full max-w-[1500px] flex-col items-center gap-10 lg:gap-16">
+							<div className="flex flex-col items-center gap-3 text-center">
+								<h1 className="text-[clamp(1.6rem,3.6vw,2.6rem)] font-semibold tracking-tight text-white">
 									{mode.name}
 								</h1>
-								{mode.note ? (
-									<p className="max-w-xl text-sm text-slate-300">
-										{mode.note}
+							</div>
+
+							<div className="grid w-full gap-8 text-center lg:grid-cols-[minmax(360px,1fr)_minmax(320px,auto)_minmax(360px,1fr)] lg:items-start lg:gap-20 lg:text-left">
+								<div className="flex w-full max-w-[520px] flex-col items-start gap-3 self-start text-sm text-slate-300/85">
+									<span className="text-xs uppercase tracking-[0.35em] text-white/60">
+										Session
+									</span>
+									<p className="min-h-[1.75rem] w-full text-slate-300">
+										{sessionSummary}
 									</p>
-								) : null}
-							</div>
-
-							<div className="relative grid place-items-center">
-								<BreathRing
-									gradient={mode.gradient}
-									phaseKey={phaseKey}
-									phaseElapsed={phaseElapsed}
-									phaseDuration={phaseDuration}
-								/>
-							</div>
-
-							<div className="flex flex-col items-center gap-6">
-								<button
-									type="button"
-									onClick={handleStartPause}
-									className={`flex h-14 min-w-[160px] items-center justify-center rounded-full bg-gradient-to-r ${mode.gradient} px-10 text-base font-semibold text-white shadow-[0_12px_45px_rgba(56,189,248,0.25)] transition-transform focus:outline-none focus:ring-2 focus:ring-white/30 ${
-										btnPop ? "btn-pop" : ""
-									}`}
-								>
-									{startLabel}
-								</button>
-								<div className="flex flex-wrap items-center justify-center gap-3">
-									{!isRunning && canReset ? (
-										<button
-											type="button"
-											onClick={handleReset}
-											className="flex h-11 min-w-[120px] items-center justify-center rounded-full border border-white/20 bg-white/5 px-6 text-xs font-semibold uppercase tracking-[0.3em] text-slate-100/90 transition-colors hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20"
-										>
-											Reset
-										</button>
-									) : null}
-								</div>
-								<p className="text-sm text-slate-300/80">{sessionSummary}</p>
-								<div className="flex w-full max-w-md flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-left text-sm text-slate-200 shadow-inner">
-									<div className="flex w-full items-center justify-between text-xs uppercase tracking-[0.3em] text-white/60">
-										<span>Session</span>
-										<span>{sessionRemainingLabel} · remain</span>
-									</div>
-									<div className="flex w-full items-baseline justify-between gap-4">
-										<div className="text-2xl font-semibold text-white">
+									<div className="flex items-baseline gap-3">
+										<span className="text-3xl font-semibold text-white">
 											{sessionRemainingLabel}
-										</div>
-										<div className="text-xs uppercase tracking-[0.35em] text-slate-400">
+										</span>
+										<span className="text-xs uppercase tracking-[0.35em] text-slate-400">
 											of {sessionTotalLabel}
-										</div>
+										</span>
 									</div>
 									<div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
 										<div
@@ -546,39 +510,74 @@ export default function MindfulBreath() {
 											style={{ width: `${progressPercent}%` }}
 										/>
 									</div>
-									{phasePrompt ? (
-										<p className="rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-slate-200/90">
-											{phasePrompt}
-										</p>
-									) : null}
+									<div className="flex w-full justify-between text-xs text-slate-400">
+										<span>{phaseLabel}</span>
+										<span>{phaseSupport}</span>
+									</div>
+								</div>
+
+								<div className="flex flex-col items-center gap-8">
+									<div className="relative grid place-items-center">
+										<BreathRing
+											gradient={mode.gradient}
+											phaseKey={phaseKey}
+											phaseElapsed={phaseElapsed}
+											phaseDuration={phaseDuration}
+										/>
+									</div>
+									<div className="-mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+										<button
+											type="button"
+											onClick={handleStartPause}
+											className={`flex h-12 min-w-[150px] items-center justify-center rounded-full bg-gradient-to-r ${mode.gradient} px-9 text-base font-semibold text-white shadow-[0_12px_40px_rgba(56,189,248,0.25)] transition-transform focus:outline-none focus:ring-2 focus:ring-white/30 ${
+												btnPop ? "btn-pop" : ""
+											}`}
+										>
+											{startLabel}
+										</button>
+										{!isRunning && canReset ? (
+											<button
+												type="button"
+												onClick={handleReset}
+												className="flex h-12 min-w-[150px] items-center justify-center rounded-full border border-white/20 bg-white/5 px-9 text-base font-semibold text-white/85 transition-colors hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/25"
+											>
+												Reset
+											</button>
+										) : null}
+									</div>
+								</div>
+
+								<div className="flex w-full max-w-[520px] flex-col items-end gap-2 self-start text-sm text-slate-300/85 lg:text-right">
+									<span className="self-end text-xs uppercase tracking-[0.35em] text-white/60">
+										Guidance
+									</span>
+									<p className="min-h-[1.75rem] w-full text-slate-200">
+										{phasePrompt ?? "Settle into the rhythm and follow each breath."}
+									</p>
 									{upcomingPhase ? (
-										<div className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
-											<span className="font-medium text-white/90">
+										<div className="flex w-full flex-col items-end gap-1 text-xs text-slate-400">
+											<span className="text-xs font-medium uppercase tracking-[0.35em] text-white/70">
 												Up next · {upcomingPhase.label}
 											</span>
-											<span className="text-slate-400">
+											<span>
 												{upcomingPhase.duration > 0
 													? `${upcomingPhase.duration}s`
 													: "Transition"}
 											</span>
+											{upcomingPhase.prompt ? (
+												<span className="text-[0.7rem] text-slate-400/80">
+													{upcomingPhase.prompt}
+												</span>
+											) : null}
 										</div>
-									) : null}
-									<div className="flex w-full items-center justify-between text-xs text-slate-400">
-										<span>{phaseLabel}</span>
-										<span>{phaseSupport}</span>
-									</div>
+									) : (
+										<div className="min-h-[1.75rem]" />
+									)}
 								</div>
 							</div>
 						</div>
 					)}
 				</main>
-
-				{companionMode ? null : (
-					<footer className="mt-8 flex flex-col items-center gap-2 text-xs text-slate-500">
-						<span>Space toggles start / pause</span>
-						<span>Open settings to adjust rhythm, duration, and sound</span>
-					</footer>
-				)}
 			</div>
 
 			{isSettingsOpen ? (
@@ -677,9 +676,6 @@ function SettingsSheet({
 				<div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						<h2 className="text-xl font-semibold text-white">Session settings</h2>
-						<p className="mt-1 text-sm text-slate-300/80">
-							Adjust rhythm, duration, and ambiance without leaving the session.
-						</p>
 					</div>
 					<div className="flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-slate-400">
 						<button
@@ -757,37 +753,6 @@ function SettingsSheet({
 					</section>
 
 					<section>
-						<header className="mb-3 text-xs uppercase tracking-[0.35em] text-white/60">
-							<span>Session duration</span>
-						</header>
-						<div
-							className="flex flex-wrap gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1"
-							role="group"
-							aria-label="Select session duration"
-						>
-							{SESSION_PRESETS.map((preset) => {
-								const isActive = preset.key === selectedPresetKey;
-								return (
-									<button
-										type="button"
-										key={preset.key}
-										onClick={() => onSelectPreset(preset.key)}
-										disabled={sessionLocked}
-										className={`flex h-10 min-w-[90px] items-center justify-center rounded-full border px-4 text-[0.7rem] font-semibold uppercase tracking-[0.3em] transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
-											isActive
-												? "border-emerald-300/50 bg-emerald-500/25 text-emerald-100 shadow-[0_8px_24px_rgba(45,212,191,0.28)]"
-												: "border-white/10 text-slate-200/80 hover:bg-white/10"
-										}`}
-										aria-pressed={isActive}
-									>
-										{preset.label}
-									</button>
-								);
-							})}
-						</div>
-					</section>
-
-					<section>
 						<header className="mb-3 flex items-center justify-between text-xs uppercase tracking-[0.35em] text-white/60">
 							<span>Soundscape</span>
 							<span className="text-[0.6rem] text-slate-400">
@@ -831,6 +796,37 @@ function SettingsSheet({
 								Level {Math.round(volume * 100)}%
 							</span>
 						</label>
+					</section>
+
+					<section>
+						<header className="mb-3 text-xs uppercase tracking-[0.35em] text-white/60">
+							<span>Session duration</span>
+						</header>
+						<div
+							className="flex flex-wrap gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1"
+							role="group"
+							aria-label="Select session duration"
+						>
+							{SESSION_PRESETS.map((preset) => {
+								const isActive = preset.key === selectedPresetKey;
+								return (
+									<button
+										type="button"
+										key={preset.key}
+										onClick={() => onSelectPreset(preset.key)}
+										disabled={sessionLocked}
+										className={`flex h-10 min-w-[90px] items-center justify-center rounded-full border px-4 text-[0.7rem] font-semibold uppercase tracking-[0.3em] transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
+											isActive
+												? "border-emerald-300/50 bg-emerald-500/25 text-emerald-100 shadow-[0_8px_24px_rgba(45,212,191,0.28)]"
+												: "border-white/10 text-slate-200/80 hover:bg-white/10"
+										}`}
+										aria-pressed={isActive}
+									>
+										{preset.label}
+									</button>
+								);
+							})}
+						</div>
 					</section>
 				</div>
 

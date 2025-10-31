@@ -41,7 +41,7 @@ export function BreathRing({
 
 	return (
 		<div className="relative grid place-items-center">
-			<div className="relative aspect-square w-[clamp(420px,45vw,820px)]">
+			<div className="relative aspect-square w-[clamp(320px,34vw,620px)]">
 				<div className="pointer-events-none absolute inset-0 flex items-center justify-center">
 					<div className="breath-ring" style={ringStyle}>
 						<div className="breath-ring__inner" style={innerStyle} />
