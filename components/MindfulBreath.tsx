@@ -459,7 +459,7 @@ export default function MindfulBreath() {
 							</div>
 						</div>
 					) : (
-						<div className="mx-auto flex w-full max-w-[1500px] flex-col items-center gap-10 lg:gap-16">
+						<div className="mx-auto flex w-full max-w-[1500px] flex-col items-center gap-12 lg:gap-[4.5rem]">
 							<div className="flex flex-col items-center gap-3 text-center">
 								<h1 className="text-[clamp(1.6rem,3.6vw,2.6rem)] font-semibold tracking-tight text-white">
 									{mode.name}
@@ -493,7 +493,7 @@ export default function MindfulBreath() {
 											phaseDuration={phaseDuration}
 										/>
 									</div>
-									<div className="-mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+									<div className="mt-4 flex flex-wrap items-center justify-center gap-3 sm:mt-5 sm:gap-4">
 										<button
 											type="button"
 											onClick={handleStartPause}
@@ -627,7 +627,7 @@ function SettingsSheet({
 				className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
 				aria-hidden
 			/>
-			<div className="relative w-full max-w-[720px] rounded-t-[32px] border border-white/15 bg-slate-950/95 px-6 py-8 shadow-2xl backdrop-blur-lg sm:rounded-3xl sm:px-10">
+			<div className="relative w-full max-w-[720px] rounded-t-[32px] border border-white/10 bg-[#0b152e] px-6 py-8 shadow-2xl sm:rounded-3xl sm:px-10">
 				<div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						<h2 className="text-xl font-semibold text-white">Session settings</h2>
@@ -722,10 +722,10 @@ function SettingsSheet({
 										key={sound.key}
 										type="button"
 										onClick={() => onSelectSound(sound.key)}
-										className={`flex h-9 items-center justify-center rounded-full px-3 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
+										className={`flex h-9 items-center justify-center rounded-full border px-4 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-white/20 ${
 											active
-												? "bg-emerald-500/25 text-emerald-100"
-												: "bg-white/5 text-mb-primary-faint hover:bg-white/10"
+												? "border-emerald-300/60 bg-emerald-500/25 text-emerald-100 shadow-[0_6px_18px_rgba(45,212,191,0.25)]"
+												: "border-white/12 bg-white/5 text-mb-primary-faint hover:bg-white/10"
 										}`}
 										aria-pressed={active}
 									>
@@ -758,7 +758,7 @@ function SettingsSheet({
 							<span>Session duration</span>
 						</header>
 						<div
-							className="flex flex-wrap gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-1"
+							className="flex flex-wrap gap-3 rounded-[2.5rem] border border-white/12 bg-white/8 px-3 py-2"
 							role="group"
 							aria-label="Select session duration"
 						>
@@ -770,10 +770,10 @@ function SettingsSheet({
 										key={preset.key}
 										onClick={() => onSelectPreset(preset.key)}
 										disabled={sessionLocked}
-										className={`flex h-10 min-w-[90px] items-center justify-center rounded-full border px-4 text-[0.7rem] font-semibold uppercase tracking-[0.3em] transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
+										className={`flex h-10 min-w-[90px] items-center justify-center rounded-full border px-5 text-[0.7rem] font-semibold uppercase tracking-[0.3em] transition-all focus:outline-none focus:ring-2 focus:ring-white/20 ${
 											isActive
 												? "border-emerald-300/50 bg-emerald-500/25 text-emerald-100 shadow-[0_8px_24px_rgba(45,212,191,0.28)]"
-												: "border-white/10 text-mb-primary-faint hover:bg-white/10"
+												: "border-white/12 text-mb-primary-faint hover:bg-white/10"
 										}`}
 										aria-pressed={isActive}
 									>
