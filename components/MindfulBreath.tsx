@@ -413,7 +413,7 @@ export default function MindfulBreath() {
 	}`;
 
 	return (
-		<div className="relative min-h-screen w-full overflow-hidden bg-slate-950 text-slate-100 antialiased selection:bg-emerald-300/30">
+		<div className="relative min-h-screen w-full overflow-hidden bg-[#0f172a] text-slate-100 antialiased selection:bg-teal-300/30">
 			<DecorativeBackgroundLite />
 
 			<div className="relative flex min-h-screen w-full flex-col px-6 py-8 sm:px-10 lg:px-20">

@@ -78,41 +78,41 @@ function getGradientColors(gradient: Mode["gradient"]): {
 	secondary: string;
 } {
 	if (gradient.includes("violet")) {
-		return { primary: "#c4b5fd", secondary: "#d946ef" };
+		return { primary: "#a5b4fc", secondary: "#818cf8" };
 	}
 	if (gradient.includes("sky")) {
 		return { primary: "#7dd3fc", secondary: "#6366f1" };
 	}
 	if (gradient.includes("rose")) {
-		return { primary: "#fb7185", secondary: "#f97316" };
+		return { primary: "#86b5d9", secondary: "#5a8fb8" };
 	}
-	return { primary: "#5eead4", secondary: "#10b981" };
+	return { primary: "#5eead4", secondary: "#14b8a6" };
 }
 
 function getDarkColor(gradient: Mode["gradient"]): string {
 	if (gradient.includes("violet")) {
-		return "#7c3aed";
+		return "#6366f1";
 	}
 	if (gradient.includes("sky")) {
 		return "#4338ca";
 	}
 	if (gradient.includes("rose")) {
-		return "#dc2626";
+		return "#3b6d8f";
 	}
-	return "#047857";
+	return "#0f766e";
 }
 
 function getGlowColor(gradient: Mode["gradient"], opacity = 0.6): string {
 	if (gradient.includes("violet")) {
-		return `rgba(196, 181, 253, ${opacity})`;
+		return `rgba(165, 180, 252, ${opacity})`;
 	}
 	if (gradient.includes("sky")) {
 		return `rgba(96, 165, 250, ${opacity})`;
 	}
 	if (gradient.includes("rose")) {
-		return `rgba(251, 113, 133, ${opacity})`;
+		return `rgba(134, 181, 217, ${opacity})`;
 	}
-	return `rgba(56, 189, 248, ${opacity})`;
+	return `rgba(94, 234, 212, ${opacity})`;
 }
 
 function easeInOutCubic(t: number): number {

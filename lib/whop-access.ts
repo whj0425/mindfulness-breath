@@ -27,7 +27,19 @@ export async function resolveAccess(
 	const headerList = headers();
 
 	try {
-		const { userId } = await whopSdk.verifyUserToken(headerList);
+		let userId: string;
+		
+		try {
+			const result = await whopSdk.verifyUserToken(headerList);
+			userId = result.userId;
+		} catch (tokenError) {
+			if (process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID) {
+				console.warn("[whop-access] Using fallback user ID in development mode");
+				userId = process.env.NEXT_PUBLIC_WHOP_AGENT_USER_ID;
+			} else {
+				throw tokenError;
+			}
+		}
 
 		const [user, accessResult, target] = await Promise.all([
 			whopSdk.users.getUser({ userId }),
