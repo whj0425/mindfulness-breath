@@ -58,7 +58,7 @@ export function SoundControls({
 							</button>
 						))}
 					</div>
-					<div className="mt-3 text-xs text-slate-300">Volume</div>
+					<div className="mt-3 text-xs text-mb-muted">Volume</div>
 					<input
 						type="range"
 						min={0}

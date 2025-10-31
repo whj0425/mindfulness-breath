@@ -29,3 +29,44 @@ body::-webkit-scrollbar {
 	width: 0;
 	height: 0;
 }
+
+.mindful-breath-root {
+	--mb-text-primary: #e5ecff;
+	--mb-text-primary-soft: rgba(229, 236, 255, 0.9);
+	--mb-text-primary-faint: rgba(229, 236, 255, 0.8);
+	--mb-text-muted: rgba(198, 208, 238, 0.85);
+	--mb-text-subtle: rgba(166, 182, 218, 0.78);
+	--mb-text-subtle-quiet: rgba(142, 158, 201, 0.72);
+	--mb-text-lowcontrast: rgba(121, 136, 181, 0.66);
+	color: var(--mb-text-primary);
+}
+
+@layer utilities {
+	.text-mb-primary {
+		color: var(--mb-text-primary);
+	}
+
+	.text-mb-primary-soft {
+		color: var(--mb-text-primary-soft);
+	}
+
+	.text-mb-primary-faint {
+		color: var(--mb-text-primary-faint);
+	}
+
+	.text-mb-muted {
+		color: var(--mb-text-muted);
+	}
+
+	.text-mb-subtle {
+		color: var(--mb-text-subtle);
+	}
+
+	.text-mb-subtle-quiet {
+		color: var(--mb-text-subtle-quiet);
+	}
+
+	.text-mb-lowcontrast {
+		color: var(--mb-text-lowcontrast);
+	}
+}

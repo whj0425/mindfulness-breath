@@ -413,7 +413,7 @@ export default function MindfulBreath() {
 	}`;
 
 	return (
-		<div className="relative min-h-screen w-full overflow-hidden bg-[#0f172a] text-slate-100 antialiased selection:bg-teal-300/30">
+		<div className="mindful-breath-root relative min-h-screen w-full overflow-hidden bg-[#0f172a] text-mb-primary antialiased selection:bg-teal-300/30">
 			<DecorativeBackgroundLite />
 
 			<div className="relative flex min-h-screen w-full flex-col px-6 py-8 sm:px-10 lg:px-20">
@@ -437,7 +437,7 @@ export default function MindfulBreath() {
 								className={`flex h-10 items-center justify-center rounded-full border border-white/20 px-4 text-[0.6rem] font-semibold uppercase tracking-[0.35em] transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 sm:h-11 sm:px-5 sm:text-[0.65rem] ${
 									companionMode
 									? "bg-emerald-500/25 text-emerald-100 hover:bg-emerald-500/35"
-									: "bg-white/5 text-slate-100/90 hover:bg-white/10"
+									: "bg-white/5 text-mb-primary-soft hover:bg-white/10"
 							}`}
 								aria-pressed={companionMode}
 							>
@@ -467,18 +467,18 @@ export default function MindfulBreath() {
 							</div>
 
 							<div className="grid w-full gap-8 text-center lg:grid-cols-[minmax(360px,1fr)_minmax(320px,auto)_minmax(360px,1fr)] lg:items-start lg:gap-20 lg:text-left">
-								<div className="flex w-full max-w-[520px] flex-col items-start gap-3 self-start text-sm text-slate-300/85">
+								<div className="flex w-full max-w-[520px] flex-col items-start gap-3 self-start text-sm text-mb-muted">
 									<span className="text-xs uppercase tracking-[0.35em] text-white/60">
 										Session
 									</span>
-									<p className="min-h-[1.75rem] w-full text-slate-300">
+									<p className="min-h-[1.75rem] w-full text-mb-muted">
 										{sessionSummary}
 									</p>
 									<div className="flex items-baseline gap-3">
 										<span className="text-3xl font-semibold text-white">
 											{sessionRemainingLabel}
 										</span>
-										<span className="text-xs uppercase tracking-[0.35em] text-slate-400">
+										<span className="text-xs uppercase tracking-[0.35em] text-mb-subtle">
 											of {sessionTotalLabel}
 										</span>
 									</div>
@@ -515,8 +515,8 @@ export default function MindfulBreath() {
 									</div>
 								</div>
 
-								<div className="flex w-full max-w-[520px] flex-col items-end gap-2 self-start text-sm text-slate-300/85 lg:text-right">
-									<div className="flex w-full flex-col items-end gap-1 text-xs text-slate-400 min-h-[1.75rem]">
+								<div className="flex w-full max-w-[520px] flex-col items-end gap-2 self-start text-sm text-mb-muted lg:text-right">
+									<div className="flex w-full flex-col items-end gap-1 text-xs text-mb-subtle min-h-[1.75rem]">
 										<span className="text-xs font-medium uppercase tracking-[0.35em] text-white/70">
 											{phaseLabel}
 										</span>
@@ -525,7 +525,7 @@ export default function MindfulBreath() {
 									<span className="self-end text-xs uppercase tracking-[0.35em] text-white/60">
 										Guidance
 									</span>
-									<p className="min-h-[1.75rem] w-full text-slate-200">
+									<p className="min-h-[1.75rem] w-full text-mb-primary-soft">
 										{phasePrompt ?? "Settle into the rhythm and follow each breath."}
 									</p>
 								</div>
@@ -632,7 +632,7 @@ function SettingsSheet({
 					<div>
 						<h2 className="text-xl font-semibold text-white">Session settings</h2>
 					</div>
-					<div className="flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-slate-400">
+					<div className="flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-mb-subtle">
 						<button
 							type="button"
 							onClick={prevMode}
@@ -684,7 +684,7 @@ function SettingsSheet({
 										className={`w-full rounded-3xl border border-white/10 px-5 py-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
 											active
 												? "bg-white/10 text-white"
-												: "bg-white/0 text-slate-200/90 hover:bg-white/5"
+												: "bg-white/0 text-mb-primary-soft hover:bg-white/5"
 										}`}
 										aria-pressed={active}
 									>
@@ -697,7 +697,7 @@ function SettingsSheet({
 											</span>
 										</div>
 										{pattern.note ? (
-											<p className="mt-2 text-sm text-slate-300/90">
+											<p className="mt-2 text-sm text-mb-muted">
 												{pattern.note}
 											</p>
 										) : null}
@@ -710,7 +710,7 @@ function SettingsSheet({
 					<section>
 						<header className="mb-3 flex items-center justify-between text-xs uppercase tracking-[0.35em] text-white/60">
 							<span>Soundscape</span>
-							<span className="text-[0.6rem] text-slate-400">
+							<span className="text-[0.6rem] text-mb-subtle">
 								Plays on start or in companion mode
 							</span>
 						</header>
@@ -725,7 +725,7 @@ function SettingsSheet({
 										className={`flex h-9 items-center justify-center rounded-full px-3 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
 											active
 												? "bg-emerald-500/25 text-emerald-100"
-												: "bg-white/5 text-slate-200/80 hover:bg-white/10"
+												: "bg-white/5 text-mb-primary-faint hover:bg-white/10"
 										}`}
 										aria-pressed={active}
 									>
@@ -734,7 +734,7 @@ function SettingsSheet({
 								);
 							})}
 						</div>
-						<label className="mt-4 flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-slate-400">
+						<label className="mt-4 flex flex-col gap-2 text-xs uppercase tracking-[0.3em] text-mb-subtle">
 							<span>Volume</span>
 							<input
 								type="range"
@@ -747,7 +747,7 @@ function SettingsSheet({
 								aria-label="Background volume"
 								disabled={soundKey === "off"}
 							/>
-							<span className="text-[0.65rem] text-slate-500">
+							<span className="text-[0.65rem] text-mb-lowcontrast">
 								Level {Math.round(volume * 100)}%
 							</span>
 						</label>
@@ -773,7 +773,7 @@ function SettingsSheet({
 										className={`flex h-10 min-w-[90px] items-center justify-center rounded-full border px-4 text-[0.7rem] font-semibold uppercase tracking-[0.3em] transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 ${
 											isActive
 												? "border-emerald-300/50 bg-emerald-500/25 text-emerald-100 shadow-[0_8px_24px_rgba(45,212,191,0.28)]"
-												: "border-white/10 text-slate-200/80 hover:bg-white/10"
+												: "border-white/10 text-mb-primary-faint hover:bg-white/10"
 										}`}
 										aria-pressed={isActive}
 									>
@@ -786,7 +786,7 @@ function SettingsSheet({
 				</div>
 
 				<div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<div className="text-xs text-slate-500">
+					<div className="text-xs text-mb-lowcontrast">
 						{canUseShortcuts ? "Use ← → to switch patterns." : "Reset to switch patterns."}
 					</div>
 					<button
